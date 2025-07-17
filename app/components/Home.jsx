@@ -4,88 +4,13 @@ import { useRouter } from 'next/navigation';
 
 import React, { useState, useEffect } from 'react';
 import io from 'socket.io-client';
-
+import GameRoom from './GameRoom';
+import Arena from './Arena';
 
 const SOCKET_SERVER_URL = 'http://localhost:3001';
 
 export default function HomePage() {
-  // const router = useRouter();
-  // const [roomCode, setRoomCode] = useState('');
 
-  // const createMatch = async () => {
-  //   const res = await fetch('/api/match/create', { method: 'POST' });
-  //   const data = await res.json();
-  //   router.push(`/arena/${data.roomId}`);
-  // };
-
-  // const joinMatch = () => {
-  //   if (roomCode.trim()) {
-  //     router.push(`/arena/${roomCode}`);
-  //   }
-  // };
-
-  // return (
-  //   <main className="min-h-screen bg-black text-white px-6 py-12 flex flex-col items-center">
-  //     <div className="text-center max-w-3xl">
-  //       <span className="text-sm px-3 py-1 border border-yellow-500 rounded-full text-yellow-400 mb-4 inline-block">
-  //         ⚔️ Proudly Real-Time
-  //       </span>
-  //       <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold mb-6 leading-tight">
-  //         Compete in Code. <br />
-  //         Win in Real-Time.
-  //       </h1>
-  //       <p className="text-lg text-gray-400 mb-8">
-  //         Battle your friends live with DSA problems. First to solve wins. No BS, just speed and skill.
-  //       </p>
-
-  //       <div className="flex flex-col sm:flex-row justify-center gap-4 mb-6">
-  //         <button
-  //           onClick={createMatch}
-  //           className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg hover:scale-105 transition shadow-lg"
-  //         >
-  //            Create Match
-  //         </button>
-
-  //         <div className="flex gap-2 items-center">
-  //           <input
-  //             type="text"
-  //             placeholder="Enter Room Code"
-  //             value={roomCode}
-  //             onChange={(e) => setRoomCode(e.target.value)}
-  //             className="bg-gray-800 border border-gray-600 px-4 py-2 rounded-md text-white placeholder-gray-500"
-  //           />
-  //           <button
-  //             onClick={joinMatch}
-  //             className="px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600"
-  //           >
-  //             Join
-  //           </button>
-  //         </div>
-  //       </div>
-
-  //       <p className="text-sm text-gray-500">
-  //         Share room code to challenge a friend. No login needed.
-  //       </p>
-  //     </div>
-
-  //     <div className="mt-16 w-full max-w-5xl">
-  //       <h2 className="text-xl font-semibold text-white mb-4">🔥 Why Coding Arena?</h2>
-  //       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
-  //         <div className="bg-gray-900 p-6 rounded-lg border border-gray-800">
-  //           <h3 className="text-lg font-bold mb-2">Real-Time Battles</h3>
-  //           <p className="text-sm text-gray-400">Live problem-solving. Compete instantly.</p>
-  //         </div>
-  //         <div className="bg-gray-900 p-6 rounded-lg border border-gray-800">
-  //           <h3 className="text-lg font-bold mb-2">Fair Play</h3>
-  //           <p className="text-sm text-gray-400">Both users get same questions, own editors.</p>
-  //         </div>
-  //         <div className="bg-gray-900 p-6 rounded-lg border border-gray-800">
-  //           <h3 className="text-lg font-bold mb-2">Leaderboard</h3>
-  //           <p className="text-sm text-gray-400">Climb rankings as you win more matches.</p>
-  //         </div>
-  //       </div>
-  //     </div>
-  //   </main>
 
  const [socket, setSocket] = useState(null);
     const [playerName, setPlayerName] = useState('');
@@ -96,6 +21,13 @@ export default function HomePage() {
     const [showModal, setShowModal] = useState(false); // For custom modal
     const [modalContent, setModalContent] = useState(''); // Content for the modal
     const [setupStep, setSetupStep] = useState('landing'); // 'landing', 'createName', 'joinName'
+
+    // Function to show a custom modal
+     // 'landing', 'createName', 'joinName', 'inRoom'
+
+    const [gameStatus, setGameStatus] = useState('waiting'); // 'waiting', 'in-progress', 'finished'
+    const [currentProblemId, setCurrentProblemId] = useState(null);
+    const [winnerId, setWinnerId] = useState(null); // Socket ID of the winner, or 'draw'
 
     // Function to show a custom modal
     const showCustomModal = (content) => {
@@ -109,13 +41,11 @@ export default function HomePage() {
         setModalContent('');
     };
 
-    // Initialize Socket.IO connection
+    // Initialize Socket.IO connection and listeners
     useEffect(() => {
-        // Connect to the Socket.IO server
         const newSocket = io(SOCKET_SERVER_URL);
         setSocket(newSocket);
 
-        // Event listeners for Socket.IO
         newSocket.on('connect', () => {
             console.log('Connected to Socket.IO server:', newSocket.id);
             setMessage('Connected to server. Choose to create or join a room!');
@@ -124,9 +54,12 @@ export default function HomePage() {
         newSocket.on('disconnect', () => {
             console.log('Disconnected from Socket.IO server');
             setMessage('Disconnected from server. Please refresh.');
-            setCurrentRoomId(null); // Reset room state on disconnect
+            setCurrentRoomId(null);
             setPlayersInRoom([]);
-            setSetupStep('landing'); // Go back to landing on disconnect
+            setSetupStep('landing');
+            setGameStatus('waiting');
+            setCurrentProblemId(null);
+            setWinnerId(null);
         });
 
         newSocket.on('roomCreated', (data) => {
@@ -134,6 +67,8 @@ export default function HomePage() {
             setCurrentRoomId(data.roomId);
             setPlayersInRoom(data.players);
             setMessage(`Room created! Share this ID: ${data.roomId}`);
+            setSetupStep('inRoom'); // Transition to in-room view
+            setGameStatus('waiting'); // Game is waiting for another player
         });
 
         newSocket.on('roomJoined', (data) => {
@@ -141,14 +76,22 @@ export default function HomePage() {
             setCurrentRoomId(data.roomId);
             setPlayersInRoom(data.players);
             setMessage(`Joined room: ${data.roomId}`);
+            setSetupStep('inRoom'); // Transition to in-room view
+            // If game is already in progress in this room, load its state
+            if (data.gameStatus) {
+                setGameStatus(data.gameStatus);
+                setCurrentProblemId(data.problemId);
+                setWinnerId(data.winnerId);
+            } else {
+                setGameStatus('waiting');
+            }
         });
 
         newSocket.on('roomError', (errorMessage) => {
             console.error('Room error:', errorMessage);
             showCustomModal(`Error: ${errorMessage}`);
             setMessage(`Error: ${errorMessage}`);
-            // If there's an error joining/creating, go back to landing or re-enable inputs
-            setSetupStep('landing'); // Or keep the current step if they can retry easily
+            setSetupStep('landing'); // Go back to landing on error
         });
 
         newSocket.on('playerJoinedRoom', (data) => {
@@ -161,24 +104,77 @@ export default function HomePage() {
             console.log('Player left room update:', data);
             setPlayersInRoom(data.players);
             setMessage(`${data.playerName} left the room.`);
+            if (data.gameStatus === 'finished' && data.winnerId) {
+                const winnerName = data.players.find(p => p.id === data.winnerId)?.name || 'Opponent';
+                showCustomModal(`${data.playerName} left. ${winnerName} wins by default!`);
+                setGameStatus('finished');
+                setWinnerId(data.winnerId);
+            } else if (data.players.length < 2) {
+                setGameStatus('waiting');
+                setCurrentProblemId(null);
+                setWinnerId(null);
+                setMessage('Waiting for another player...');
+            }
         });
 
+        newSocket.on('gameStarted', (data) => {
+            console.log('Game started:', data);
+            setGameStatus('in-progress');
+            setCurrentProblemId(data.problemId);
+            setWinnerId(null);
+            // Reset code and passed tests for all players on game start
+            setPlayersInRoom(prevPlayers => prevPlayers.map(p => ({ ...p, code: '', passedTests: 0 })));
+            setMessage('Game started! Good luck!');
+        });
 
-        // Clean up on component unmount
+        newSocket.on('codeUpdate', (data) => {
+            setPlayersInRoom(prevPlayers =>
+                prevPlayers.map(p =>
+                    p.id === data.playerId ? { ...p, code: data.code } : p
+                )
+            );
+        });
+
+        newSocket.on('testResultsUpdate', (data) => {
+            setPlayersInRoom(prevPlayers =>
+                prevPlayers.map(p =>
+                    p.id === data.playerId ? { ...p, passedTests: data.passedTests } : p
+                )
+            );
+            setMessage(`Player ${playersInRoom.find(p => p.id === data.playerId)?.name || 'Unknown'} passed ${data.passedTests} tests.`);
+        });
+
+        newSocket.on('gameFinished', (data) => {
+            setGameStatus('finished');
+            setWinnerId(data.winnerId);
+            const winnerName = data.winnerId === 'draw' ? 'It\'s a draw!' :
+                               playersInRoom.find(p => p.id === data.winnerId)?.name || 'Unknown Player';
+            showCustomModal(`Game Over! Winner: ${winnerName}`);
+            setMessage(`Game finished! Winner: ${winnerName}`);
+        });
+
+        newSocket.on('gameReset', () => {
+            setGameStatus('waiting');
+            setCurrentProblemId(null);
+            setWinnerId(null);
+            setPlayersInRoom(prevPlayers => prevPlayers.map(p => ({ ...p, code: '', passedTests: 0 })));
+            setMessage('Game has been reset. Waiting for players to start a new round.');
+        });
+
         return () => {
             newSocket.disconnect();
         };
-    }, []); // Empty dependency array means this runs once on mount
+    }, []);
 
     // Handlers for initial button clicks
     const handleCreateMatchClick = () => {
         setSetupStep('createName');
-        setMessage(''); // Clear previous messages
+        setMessage('');
     };
 
     const handleJoinMatchClick = () => {
         setSetupStep('joinName');
-        setMessage(''); // Clear previous messages
+        setMessage('');
     };
 
     // Function to confirm room creation after name input
@@ -199,6 +195,25 @@ export default function HomePage() {
         }
         setMessage(`Joining room ${roomIdInput}...`);
         socket.emit('joinRoom', { roomId: roomIdInput, playerName });
+    };
+
+    // Functions to be passed down to child components
+    const startGame = () => {
+        if (!socket || !currentRoomId || playersInRoom.length < 2) {
+            showCustomModal("Cannot start game. Ensure two players are in the room.");
+            return;
+        }
+        if (gameStatus === 'in-progress') {
+            showCustomModal("Game is already in progress.");
+            return;
+        }
+        setMessage('Starting game...');
+        socket.emit('startGame', { roomId: currentRoomId });
+    };
+
+    const resetGame = () => {
+        if (!socket || !currentRoomId) return;
+        socket.emit('resetGame', { roomId: currentRoomId });
     };
 
     return (
@@ -336,24 +351,30 @@ export default function HomePage() {
                     )}
                 </>
             ) : (
-                // Display when in a room
-                <div className="bg-gray-800 p-8 rounded-xl shadow-2xl border border-gray-700 w-full max-w-md flex flex-col items-center space-y-6">
-                    <h2 className="text-3xl font-bold text-purple-400">Room ID: <span className="font-mono text-pink-300">{currentRoomId}</span></h2>
-                    <p className="text-gray-300 text-lg">Welcome, <span className="font-semibold text-yellow-300">{playerName}</span>!</p>
+                gameStatus === 'waiting' ? (
+                    <GameRoom
+                        socket={socket}
+                        playerName={playerName}
+                        currentRoomId={currentRoomId}
+                        playersInRoom={playersInRoom}
+                        gameStatus={gameStatus}
+                        startGame={startGame} 
+                    />
+                ) : (
+                    <Arena
+                        socket={socket}
+                        currentRoomId={currentRoomId}
+                        playersInRoom={playersInRoom}
+                        gameStatus={gameStatus}
+                        currentProblemId={currentProblemId}
+                        winnerId={winnerId}
+                        setMessage={setMessage}
+                        showCustomModal={showCustomModal}
+                        resetGame={resetGame}
+                    />
+                )
 
-                    <div className="w-full">
-                        <h3 className="text-xl font-semibold text-gray-300 mb-2">Players in this Room:</h3>
-                        <ul className="list-disc list-inside text-gray-400">
-                            {playersInRoom.map((player, index) => (
-                                <li key={player.id} className="flex items-center">
-                                    <svg className="w-5 h-5 mr-2 text-blue-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"></path></svg>
-                                    {player.name} {player.id === socket.id && <span className="ml-2 text-xs bg-blue-500 px-2 py-1 rounded-full">YOU</span>}
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                    <p className="text-gray-400 text-sm mt-4">Waiting for more players to join or for the game to start...</p>
-                </div>
+                
             )}
             <div className="mt-16 w-full max-w-5xl">
                 <h2 className="text-xl font-semibold text-white mb-4">Why Coding Arena?</h2>
