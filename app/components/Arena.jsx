@@ -1,6 +1,13 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
+import Editor from "@monaco-editor/react";
+import { PanelGroup, Panel, PanelResizeHandle } from "react-resizable-panels";
 
+// This component simulates a competitive coding arena.
+// NOTE: The backend API for code execution (`/api/execute`) and the WebSocket server
+// are assumed to be implemented elsewhere. This component is the front-end portion.
 
+// Problem definitions are kept on the client for easy access to display
+// information and for referencing test cases.
 const PROBLEMS = [
     {
         id: 'sumTwoNumbers',
@@ -14,6 +21,7 @@ const PROBLEMS = [
             { input: [0, 0], expectedOutput: 0 },
             { input: [100, 200], expectedOutput: 300 },
         ],
+        // This snippet is used for the client-side simulation in `handleSubmitSolution`
         correctSolutionSnippet: "return a + b;",
     },
     {
@@ -45,6 +53,117 @@ const PROBLEMS = [
     }
 ];
 
+// Configuration for supported languages, including their Judge0 API ID and Monaco editor mode.
+const LANGUAGES = [
+    { id: 54, name: "C++", mode: "cpp" },
+    { id: 62, name: "Java", mode: "java" },
+];
+
+// Helper function to call the backend API for code execution.
+const runCodeAPI = async (code, languageId, input) => {
+    try {
+        // In a real application, the '/api/execute' endpoint would point to your backend server
+        // which securely runs the code, possibly using a service like Judge0.
+        const res = await fetch("/api/execute", {
+            method: "POST",
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                source_code: code,
+                language_id: languageId,
+                // Standard input should be a string.
+                stdin: Array.isArray(input) ? input.join('\n') : String(input),
+            }),
+        });
+        return await res.json();
+    } catch (err) {
+        console.error("API Error:", err);
+        return { stderr: "Failed to connect to the execution service." };
+    }
+};
+
+
+// Generates a default function template based on the problem and selected language.
+const generateDefaultFunction = (problem, langMode) => {
+    if (!problem) return '';
+    const functionName = problem.title.replace(/\s+/g, '');
+    const paramInputs = problem.testCases[0].input;
+
+    switch (langMode) {
+        case 'javascript':
+            const jsParams = paramInputs.map((_, i) => String.fromCharCode(97 + i)).join(', ');
+            return `function ${functionName}(${jsParams}) {\n  // Write your JavaScript code here\n}`;
+        
+        case 'python':
+            const pyParams = paramInputs.map((_, i) => String.fromCharCode(97 + i)).join(', ');
+            return `def ${functionName.toLowerCase()}(${pyParams}):\n  # Write your Python code here\n  pass`;
+
+        case 'java': {
+            const javaParamTypes = paramInputs.map(() => `int`); // Assuming int for simplicity
+            const javaParams = javaParamTypes.map((type, i) => `${type} arg${i}`).join(', ');
+            const scannerLines = javaParamTypes.map((_, i) => `int arg${i} = sc.nextInt();`).join('\n        ');
+            const functionCallParams = javaParamTypes.map((_, i) => `arg${i}`).join(', ');
+
+            return `import java.util.*;
+
+// Do not change the class name
+public class Main {
+    
+    /**
+     * This is the method you need to implement.
+     */
+    public int ${functionName}(${javaParams}) {
+        // Write your solution logic here
+        return 0; 
+    }
+
+    // --- Boilerplate - Do not edit below this line ---
+    public static void main(String[] args) {
+        Main solution = new Main();
+        Scanner sc = new Scanner(System.in);
+        
+        ${scannerLines}
+        
+        System.out.println(solution.${functionName}(${functionCallParams}));
+        
+        sc.close();
+    }
+}`;
+        }
+        case 'cpp': {
+            const cppParamTypes = paramInputs.map(() => `int`);
+            const cppParams = cppParamTypes.map((type, i) => `${type} arg${i}`).join(', ');
+            const cinLines = cppParamTypes.map((_, i) => `    int arg${i};\n    std::cin >> arg${i};`).join('\n');
+            const cppCallParams = cppParamTypes.map((_, i) => `arg${i}`).join(', ');
+
+            return `#include <iostream>
+
+class Solution {
+public:
+    /**
+     * This is the method you need to implement.
+     */
+    int ${functionName}(${cppParams}) {
+        // Write your solution logic here
+        return 0;
+    }
+};
+
+// --- Boilerplate - Do not edit below this line ---
+int main() {
+    Solution solution;
+${cinLines}
+    
+    int result = solution.${functionName}(${cppCallParams});
+    std::cout << result << std::endl;
+    
+    return 0;
+}`;
+        }
+        default:
+            return `// Please select a language.`;
+    }
+};
+
 
 const Arena = ({
     socket,
@@ -57,163 +176,282 @@ const Arena = ({
     showCustomModal,
     resetGame
 }) => {
-    // Find the full problem object based on problemId
+    // Find the current problem from the hardcoded list.
     const currentProblem = PROBLEMS.find(p => p.id === currentProblemId);
 
-    // Refs for code editors to prevent re-rendering issues with textarea value
-    const playerCodeRefs = useRef({});
+    // Refs and State
+    const editorInstanceRef = useRef(null);
+    const [codeValue, setCodeValue] = useState('');
+    const [selectedLanguage, setSelectedLanguage] = useState(LANGUAGES[0]); // Default to JavaScript
+    const [activeBottomTab, setActiveBottomTab] = useState('testcase'); // 'testcase' or 'result'
+    const [output, setOutput] = useState(''); // For displaying results from run/submit
+    const [isRunning, setIsRunning] = useState(false);
 
-    // Effect to update editor content when playersInRoom changes (e.g., opponent types)
+    // Effect to set initial code when the problem or language changes.
     useEffect(() => {
-        playersInRoom.forEach(player => {
-            if (playerCodeRefs.current[player.id]) {
-                // Only update if the code in the ref is different from the player's code in state
-                // This prevents overwriting user's typing if they are the current player
-                if (playerCodeRefs.current[player.id].value !== player.code) {
-                    playerCodeRefs.current[player.id].value = player.code;
-                }
-            }
-        });
-    }, [playersInRoom]); // Re-run when playersInRoom array changes
+        if (currentProblem) {
+            const newCode = generateDefaultFunction(currentProblem, selectedLanguage.mode);
+            setCodeValue(newCode);
+        }
+    }, [currentProblem, selectedLanguage]);
 
-    // Simulate running test cases on the client
-    const runTests = () => {
+    // Effect to listen for code updates from other players via WebSocket.
+    useEffect(() => {
+        const myPlayer = playersInRoom.find(p => p.id === socket?.id);
+        // This logic can be expanded to handle real-time collaborative editing more gracefully.
+        // For now, it just syncs the code if it's different.
+        if (myPlayer && myPlayer.code && myPlayer.code !== codeValue) {
+            // setCodeValue(myPlayer.code);
+        }
+    }, [playersInRoom, socket?.id, codeValue]);
+
+
+    const handleEditorDidMount = (editor, monaco) => {
+        editorInstanceRef.current = editor;
+    };
+
+    // Handles code changes in the editor.
+    const handleEditorChange = (value) => {
+        const newCode = value || '';
+        setCodeValue(newCode);
+        // Emit code change to other players in the room for real-time collaboration.
+        if (socket && currentRoomId) {
+            socket.emit('codeChange', {
+                roomId: currentRoomId,
+                code: newCode,
+            });
+        }
+    };
+    
+    // Handles language selection from the dropdown.
+    const handleLanguageChange = (e) => {
+        const langId = parseInt(e.target.value, 10);
+        const lang = LANGUAGES.find(l => l.id === langId);
+        if (lang) {
+            setSelectedLanguage(lang);
+        }
+    };
+
+    // Runs the code against the first test case for quick feedback.
+    const handleRunCode = async () => {
+        if (!currentProblem || isRunning) return;
+
+        setIsRunning(true);
+        setOutput('Running your code...');
+        setActiveBottomTab('result');
+
+        const firstTestCase = currentProblem.testCases[0];
+        const result = await runCodeAPI(codeValue, selectedLanguage.id, firstTestCase.input);
+
+        let resultText = `Input:\n${JSON.stringify(firstTestCase.input)}\n\n`;
+        if (result.stderr) {
+            resultText += `Error:\n${result.stderr}`;
+        } else if (result.compile_output) {
+            resultText += `Compile Error:\n${result.compile_output}`;
+        } else {
+            resultText += `Your Output:\n${result.stdout || ''}`;
+        }
+        resultText += `\n\nExpected Output:\n${firstTestCase.expectedOutput}`;
+
+        setOutput(resultText);
+        setIsRunning(false);
+    };
+
+    // Submits the solution for grading against all test cases (simulation).
+    const handleSubmitSolution = () => {
         if (!socket || !currentRoomId || !currentProblem || gameStatus !== 'in-progress') {
             showCustomModal("Game is not in progress or problem not loaded.");
             return;
         }
 
-        setMessage('Running tests...');
-        let passedCount = 0;
-        const code = playerCodeRefs.current[socket.id]?.value || ''; // Get code from ref
+        setMessage('Submitting solution...');
+        setActiveBottomTab('result');
 
-        // Simple simulation: check if the correct solution snippet is present in the code
-        const isCorrectSolutionPresent = code.includes(currentProblem.correctSolutionSnippet);
+        // --- Client-Side Simulation Logic ---
+        // In a real-world scenario, you would run all test cases on the backend.
+        // This simulation provides instant feedback for the demo.
+        let passedCount = 0;
+        const isCorrectSolutionPresent = codeValue.includes(currentProblem.correctSolutionSnippet);
 
         if (isCorrectSolutionPresent) {
-            passedCount = currentProblem.testCases.length; // Simulate passing all tests
+            passedCount = currentProblem.testCases.length;
+        } else if (codeValue.includes("return")) {
+            // Give partial credit for a plausible attempt.
+            passedCount = Math.floor(currentProblem.testCases.length / 2);
+        }
+
+        // Emit the result to the server to update scores.
+        socket.emit('submitSolution', { roomId: currentRoomId, passedTests: passedCount });
+
+        // Update the local UI with the submission result.
+        let submissionResult;
+        if (passedCount === currentProblem.testCases.length) {
+            submissionResult = `Congratulations! All ${passedCount} tests passed!`;
+            setMessage("Solution submitted and all tests passed!");
         } else {
-            // Simulate partial success if the code is not completely correct but has some logic
-            if (code.includes("function") && code.includes("return")) {
-                passedCount = Math.floor(currentProblem.testCases.length / 2); // Pass half if function structure exists
-            }
+            submissionResult = `Submission Result: Passed ${passedCount} out of ${currentProblem.testCases.length} tests.\nKeep trying!`;
+            setMessage(`Solution submitted. Passed: ${passedCount}/${currentProblem.testCases.length}`);
         }
-
-        // Emit solution to server
-        socket.emit('submitSolution', { roomId: currentRoomId, passedTests });
-        setMessage(`Tests run. Passed: ${passedCount}/${currentProblem.testCases.length}`);
+        setOutput(submissionResult);
     };
 
-    // Handle code changes in the editor
-    const handleCodeChange = (e) => {
-        const newCode = e.target.value;
-        // Update local ref immediately
-        if (playerCodeRefs.current[socket.id]) {
-            playerCodeRefs.current[socket.id].value = newCode;
-        }
-        // Emit code change to server for opponent to see
-        if (socket && currentRoomId && gameStatus === 'in-progress') {
-            socket.emit('codeChange', { roomId: currentRoomId, code: newCode });
-        }
-    };
-
-    // Determine current user and opponent for display purposes
-    const myPlayer = playersInRoom.find(p => p.id === socket?.id);
-    const opponentPlayer = playersInRoom.find(p => p.id !== socket?.id);
 
     return (
-        <div className="bg-gray-800 p-8 rounded-xl shadow-2xl border border-gray-700 w-full max-w-6xl flex flex-col lg:flex-row gap-8">
-            {/* Problem Statement and Player Info */}
-            <div className="flex-1 flex flex-col space-y-6">
-                <h2 className="text-3xl font-bold text-purple-400 mb-4">Room: {currentRoomId}</h2>
-
-                {(gameStatus === 'in-progress' || gameStatus === 'finished') && currentProblem && (
-                    <div className="bg-gray-700 p-6 rounded-lg shadow-inner border border-gray-600">
-                        <h3 className="text-2xl font-semibold text-pink-300 mb-3">{currentProblem.title}</h3>
-                        <p className="text-gray-300 mb-4">{currentProblem.description}</p>
-                        <pre className="bg-gray-800 text-gray-200 p-4 rounded-md text-sm overflow-auto border border-gray-600">
-                            {currentProblem.example}
-                        </pre>
-                        <h4 className="text-xl font-semibold text-gray-300 mt-4 mb-2">Test Cases (Simulated):</h4>
-                        <ul className="list-disc list-inside text-gray-400 text-sm">
-                            {currentProblem.testCases.map((tc, index) => (
-                                <li key={index}>Input: [{tc.input.join(', ')}] Expected: {tc.expectedOutput}</li>
-                            ))}
-                        </ul>
-                    </div>
-                )}
-
-                {/* Player Status */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {playersInRoom.map((player) => {
-                        const isCurrentPlayer = player.id === socket?.id;
-                        const isWinner = winnerId === player.id;
-                        const borderColor = isWinner ? 'border-yellow-400' : (isCurrentPlayer ? 'border-blue-500' : 'border-gray-600');
-                        const bgColor = isCurrentPlayer ? 'bg-gray-700' : 'bg-gray-700';
-
-                        return (
-                            <div key={player.id} className={`${bgColor} p-4 rounded-lg shadow-md border-2 ${borderColor}`}>
-                                <h4 className="text-xl font-semibold mb-2 flex items-center">
-                                    <svg className="w-6 h-6 mr-2 text-blue-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"></path></svg>
-                                    {player.name}
-                                    {isCurrentPlayer && <span className="ml-2 text-xs bg-blue-500 px-2 py-1 rounded-full">YOU</span>}
-                                    {isWinner && <span className="ml-2 text-xs bg-yellow-500 px-2 py-1 rounded-full">WINNER!</span>}
-                                </h4>
-                                <p className="text-gray-300">
-                                    Passed Tests: <span className="font-bold text-lg text-green-400">{player.passedTests}</span> / {currentProblem?.testCases.length || 0}
-                                </p>
-                            </div>
-                        );
-                    })}
-                </div>
-
-                {gameStatus === 'finished' && (
-                    <button
-                        onClick={resetGame}
-                        className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-lg mt-4"
+        <div className="flex flex-col h-[calc(100vh-8rem)] w-full bg-gray-900 text-gray-300 rounded-lg overflow-hidden border border-gray-700 shadow-xl">
+            {/* Top Bar within Arena */}
+            <div className="flex justify-between items-center bg-gray-800 p-3 border-b border-gray-700">
+                <span className="text-lg font-semibold text-gray-200">Coding Arena</span>
+                <div className="flex items-center space-x-4">
+                     <select
+                        value={selectedLanguage.id}
+                        onChange={handleLanguageChange}
+                        disabled={isRunning || gameStatus === 'finished'}
+                        className="p-2 rounded-md bg-gray-700 text-white border border-gray-600 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors disabled:opacity-60"
                     >
-                        Reset Game for New Round
-                    </button>
-                )}
+                        {LANGUAGES.map((lang) => (
+                            <option key={lang.id} value={lang.id}>
+                                {lang.name}
+                            </option>
+                        ))}
+                    </select>
+                </div>
             </div>
 
-            {/* Code Editors and Controls */}
-            {(gameStatus === 'in-progress' || gameStatus === 'finished') && currentProblem && (
-                <div className="flex-1 flex flex-col space-y-6">
-                    {/* My Code Editor */}
-                    <h2 className="text-3xl font-bold text-yellow-400">{myPlayer?.name}'s Code</h2>
-                    <textarea
-                        ref={el => playerCodeRefs.current[socket?.id] = el}
-                        defaultValue={myPlayer?.code || `function ${currentProblem.title.replace(/\s/g, '').toLowerCase()}(${currentProblem.testCases[0].input.map((_, i) => String.fromCharCode(97 + i)).join(', ')}) {\n  // Write your code here\n}`}
-                        onChange={handleCodeChange}
-                        placeholder={`function ${currentProblem.title.replace(/\s/g, '').toLowerCase()}(${currentProblem.testCases[0].input.map((_, i) => String.fromCharCode(97 + i)).join(', ')}) {\n  // Write your code here\n}`}
-                        className="w-full h-72 p-4 rounded-lg bg-gray-900 border border-gray-600 text-gray-200 font-mono text-sm resize-y focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-                        spellCheck="false"
-                        disabled={gameStatus === 'finished'}
-                    ></textarea>
-                    <button
-                        onClick={runTests}
-                        disabled={gameStatus === 'finished'}
-                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-xl"
-                    >
-                        Run Tests
-                    </button>
-
-                    {/* Opponent's Code Editor */}
-                    {opponentPlayer && (
+            {/* Main Content Area: Resizable Panels */}
+            <PanelGroup direction="horizontal" className="flex-1">
+                {/* Left Panel: Problem Description */}
+                <Panel defaultSize={40} minSize={25} className="flex flex-col p-6 border-r border-gray-700 overflow-y-auto bg-gray-800">
+                    {currentProblem ? (
                         <>
-                            <h2 className="text-3xl font-bold text-green-400 mt-8">{opponentPlayer.name}'s Code</h2>
-                            <textarea
-                                ref={el => playerCodeRefs.current[opponentPlayer.id] = el}
-                                defaultValue={opponentPlayer.code || `function ${currentProblem.title.replace(/\s/g, '').toLowerCase()}(${currentProblem.testCases[0].input.map((_, i) => String.fromCharCode(97 + i)).join(', ')}) {\n  // Opponent's code will appear here\n}`}
-                                className="w-full h-72 p-4 rounded-lg bg-gray-900 border  text-gray-200 font-mono text-sm resize-y border-dashed border-gray-500"
-                                spellCheck="false"
-                                readOnly // Opponent's editor is read-only
-                            ></textarea>
+                            <div className="flex border-b border-gray-700 mb-4">
+                                <button className="px-4 py-2 text-sm font-medium text-blue-400 border-b-2 border-blue-400">Description</button>
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-100 mb-2">{currentProblem.title}</h3>
+                            <div className="flex items-center space-x-2 text-sm mb-4">
+                                <span className="px-2 py-1 rounded-full bg-green-600 text-white">Easy</span>
+                                <span className="text-gray-500">|</span>
+                                <span className="text-gray-500">Room: {currentRoomId}</span>
+                            </div>
+                            <p className="text-gray-300 text-sm mb-4 leading-relaxed">{currentProblem.description}</p>
+                            <h4 className="text-lg font-semibold text-gray-200 mt-4 mb-2">Example:</h4>
+                            <pre className="bg-gray-900 text-gray-200 p-4 rounded-md text-sm overflow-auto border border-gray-600">
+                                {currentProblem.example}
+                            </pre>
+                             {/* Player Status below problem for score comparison */}
+                             <div className="mt-auto pt-4 border-t border-gray-700">
+                                 <h4 className="text-lg font-semibold text-gray-200 mb-2">Live Scores:</h4>
+                                 <div className="grid grid-cols-1 gap-2">
+                                     {playersInRoom.map((player) => {
+                                         const isCurrentPlayer = player.id === socket?.id;
+                                         const isWinner = winnerId === player.id;
+                                         const statusColor = isWinner ? 'text-yellow-400' : (isCurrentPlayer ? 'text-blue-400' : 'text-gray-400');
+
+                                         return (
+                                             <div key={player.id} className="flex items-center justify-between text-sm p-2 bg-gray-900 rounded-md">
+                                                 <span className={`${statusColor} font-medium flex items-center`}>
+                                                     <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"></path></svg>
+                                                     {player.name} {isCurrentPlayer && "(You)"}
+                                                 </span>
+                                                 <div className="flex items-center">
+                                                    <span className="text-green-400 font-bold">
+                                                        {player.passedTests} / {currentProblem.testCases.length}
+                                                    </span>
+                                                    {isWinner && <span className="ml-3 text-xs bg-yellow-500 text-black px-2 py-1 rounded-full font-bold">WINNER!</span>}
+                                                 </div>
+                                             </div>
+                                         );
+                                     })}
+                                 </div>
+                             </div>
                         </>
+                    ) : (
+                        <div className="text-center text-gray-400">Waiting for the game to start...</div>
                     )}
-                </div>
-            )}
+                </Panel>
+
+                <PanelResizeHandle className="w-2 bg-gray-700 hover:bg-blue-500 transition-colors cursor-ew-resize flex items-center justify-center">
+                    <div className="w-1 h-8 bg-gray-500 rounded-full"></div>
+                </PanelResizeHandle>
+
+                {/* Right Panel: Code Editor and Controls */}
+                <Panel defaultSize={60} minSize={30} className="flex flex-col bg-gray-800">
+                    <PanelGroup direction="vertical" className="flex-1">
+                        <Panel defaultSize={70} minSize={50}>
+                            <Editor
+                                height="100%"
+                                language={selectedLanguage.mode}
+                                theme="vs-dark"
+                                value={codeValue}
+                                onMount={handleEditorDidMount}
+                                onChange={handleEditorChange}
+                                options={{
+                                    fontSize: 14,
+                                    minimap: { enabled: false },
+                                    wordWrap: 'on',
+                                    scrollBeyondLastLine: false,
+                                    readOnly: gameStatus === 'finished' || isRunning,
+                                }}
+                            />
+                        </Panel>
+
+                        <PanelResizeHandle className="h-2 bg-gray-700 hover:bg-blue-500 transition-colors cursor-ns-resize flex items-center justify-center">
+                            <div className="w-8 h-1 bg-gray-500 rounded-full"></div>
+                        </PanelResizeHandle>
+
+                        <Panel defaultSize={30} minSize={20} className="flex flex-col p-4 bg-gray-800 border-t border-gray-700">
+                            <div className="flex border-b border-gray-700 mb-3">
+                                <button
+                                    className={`px-4 py-2 text-sm font-medium ${activeBottomTab === 'testcase' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-500 hover:text-gray-300'} transition-colors`}
+                                    onClick={() => setActiveBottomTab('testcase')}
+                                >
+                                    Testcase
+                                </button>
+                                <button
+                                    className={`px-4 py-2 text-sm font-medium ${activeBottomTab === 'result' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-500 hover:text-gray-300'} transition-colors`}
+                                    onClick={() => setActiveBottomTab('result')}
+                                >
+                                    Result
+                                </button>
+                            </div>
+                            <div className="bg-gray-900 p-3 rounded-md text-sm text-gray-300 flex-1 overflow-y-auto border border-gray-700">
+                                {activeBottomTab === 'testcase' && (
+                                    <pre>Input: {currentProblem ? JSON.stringify(currentProblem.testCases[0].input, null, 2) : 'N/A'}</pre>
+                                )}
+                                {activeBottomTab === 'result' && (
+                                    <pre className="whitespace-pre-wrap">{output || 'Run or submit your code to see the result.'}</pre>
+                                )}
+                            </div>
+                            <div className="flex justify-end items-center mt-4 space-x-3">
+                                {gameStatus === 'finished' ? (
+                                     <button
+                                        onClick={resetGame}
+                                        className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-md transition-transform transform hover:scale-105 shadow-lg"
+                                    >
+                                        Reset Game
+                                    </button>
+                                ) : (
+                                    <>
+                                        <button
+                                            onClick={handleRunCode}
+                                            disabled={isRunning || gameStatus !== 'in-progress'}
+                                            className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            {isRunning ? 'Running...' : 'Run Code'}
+                                        </button>
+                                        <button
+                                            onClick={handleSubmitSolution}
+                                            disabled={isRunning || gameStatus !== 'in-progress'}
+                                            className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md transition-transform transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            Submit
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        </Panel>
+                    </PanelGroup>
+                </Panel>
+            </PanelGroup>
         </div>
     );
 };

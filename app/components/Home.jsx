@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+
 
 import React, { useState, useEffect } from 'react';
 import io from 'socket.io-client';
@@ -14,34 +14,31 @@ export default function HomePage() {
 
  const [socket, setSocket] = useState(null);
     const [playerName, setPlayerName] = useState('');
-    const [roomIdInput, setRoomIdInput] = useState(''); // For joining existing room
-    const [currentRoomId, setCurrentRoomId] = useState(null); // The room user is currently in
-    const [message, setMessage] = useState(''); // General messages to the user
-    const [playersInRoom, setPlayersInRoom] = useState([]); // List of players in the current room
-    const [showModal, setShowModal] = useState(false); // For custom modal
-    const [modalContent, setModalContent] = useState(''); // Content for the modal
-    const [setupStep, setSetupStep] = useState('landing'); // 'landing', 'createName', 'joinName'
+    const [roomIdInput, setRoomIdInput] = useState(''); 
+    const [currentRoomId, setCurrentRoomId] = useState(null); 
+    const [message, setMessage] = useState(''); 
+    const [playersInRoom, setPlayersInRoom] = useState([]);
+    const [showModal, setShowModal] = useState(false); 
+    const [modalContent, setModalContent] = useState(''); 
+    const [setupStep, setSetupStep] = useState('landing');
 
-    // Function to show a custom modal
-     // 'landing', 'createName', 'joinName', 'inRoom'
+   
 
     const [gameStatus, setGameStatus] = useState('waiting'); // 'waiting', 'in-progress', 'finished'
     const [currentProblemId, setCurrentProblemId] = useState(null);
     const [winnerId, setWinnerId] = useState(null); // Socket ID of the winner, or 'draw'
 
-    // Function to show a custom modal
+    
     const showCustomModal = (content) => {
         setModalContent(content);
         setShowModal(true);
     };
 
-    // Function to close the custom modal
     const closeCustomModal = () => {
         setShowModal(false);
         setModalContent('');
     };
 
-    // Initialize Socket.IO connection and listeners
     useEffect(() => {
         const newSocket = io(SOCKET_SERVER_URL);
         setSocket(newSocket);
@@ -67,8 +64,8 @@ export default function HomePage() {
             setCurrentRoomId(data.roomId);
             setPlayersInRoom(data.players);
             setMessage(`Room created! Share this ID: ${data.roomId}`);
-            setSetupStep('inRoom'); // Transition to in-room view
-            setGameStatus('waiting'); // Game is waiting for another player
+            setSetupStep('inRoom'); 
+            setGameStatus('waiting'); 
         });
 
         newSocket.on('roomJoined', (data) => {
@@ -76,8 +73,8 @@ export default function HomePage() {
             setCurrentRoomId(data.roomId);
             setPlayersInRoom(data.players);
             setMessage(`Joined room: ${data.roomId}`);
-            setSetupStep('inRoom'); // Transition to in-room view
-            // If game is already in progress in this room, load its state
+            setSetupStep('inRoom'); 
+          
             if (data.gameStatus) {
                 setGameStatus(data.gameStatus);
                 setCurrentProblemId(data.problemId);
@@ -91,7 +88,7 @@ export default function HomePage() {
             console.error('Room error:', errorMessage);
             showCustomModal(`Error: ${errorMessage}`);
             setMessage(`Error: ${errorMessage}`);
-            setSetupStep('landing'); // Go back to landing on error
+            setSetupStep('landing'); 
         });
 
         newSocket.on('playerJoinedRoom', (data) => {
@@ -122,18 +119,18 @@ export default function HomePage() {
             setGameStatus('in-progress');
             setCurrentProblemId(data.problemId);
             setWinnerId(null);
-            // Reset code and passed tests for all players on game start
+            
             setPlayersInRoom(prevPlayers => prevPlayers.map(p => ({ ...p, code: '', passedTests: 0 })));
             setMessage('Game started! Good luck!');
         });
 
-        newSocket.on('codeUpdate', (data) => {
-            setPlayersInRoom(prevPlayers =>
-                prevPlayers.map(p =>
-                    p.id === data.playerId ? { ...p, code: data.code } : p
-                )
-            );
-        });
+        // newSocket.on('codeUpdate', (data) => {
+        //     setPlayersInRoom(prevPlayers =>
+        //         prevPlayers.map(p =>
+        //             p.id === data.playerId ? { ...p, code: data.code } : p
+        //         )
+        //     );
+        // });
 
         newSocket.on('testResultsUpdate', (data) => {
             setPlayersInRoom(prevPlayers =>
@@ -166,7 +163,7 @@ export default function HomePage() {
         };
     }, []);
 
-    // Handlers for initial button clicks
+   
     const handleCreateMatchClick = () => {
         setSetupStep('createName');
         setMessage('');
@@ -177,7 +174,7 @@ export default function HomePage() {
         setMessage('');
     };
 
-    // Function to confirm room creation after name input
+    
     const confirmCreateRoom = () => {
         if (!socket || !playerName) {
             showCustomModal("Please enter your name and ensure you are connected to the server.");
@@ -187,7 +184,7 @@ export default function HomePage() {
         socket.emit('createRoom', { playerName });
     };
 
-    // Function to confirm joining room after name and ID input
+    
     const confirmJoinRoom = () => {
         if (!socket || !playerName || !roomIdInput) {
             showCustomModal("Please enter your name and a Room ID, and ensure you are connected to the server.");
@@ -197,7 +194,7 @@ export default function HomePage() {
         socket.emit('joinRoom', { roomId: roomIdInput, playerName });
     };
 
-    // Functions to be passed down to child components
+    
     const startGame = () => {
         if (!socket || !currentRoomId || playersInRoom.length < 2) {
             showCustomModal("Cannot start game. Ensure two players are in the room.");
@@ -376,7 +373,8 @@ export default function HomePage() {
 
                 
             )}
-            <div className="mt-16 w-full max-w-5xl">
+           {gameStatus == "waiting" ? (
+             <div className="mt-16 w-full max-w-5xl">
                 <h2 className="text-xl font-semibold text-white mb-4">Why Coding Arena?</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
                     <div className="bg-gray-900 p-6 rounded-lg border border-gray-800">
@@ -393,6 +391,7 @@ export default function HomePage() {
                     </div>
                 </div>
             </div>
+           ) : (<></>)}
         </div>
 
 
