@@ -10,7 +10,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
     cors: {
-        origin: "http://localhost:3000", // IMPORTANT: Change this to your React app's actual URL
+        origin: process.env.FRONTEND_URL, // IMPORTANT: Change this to your React app's actual URL
         methods: ["GET", "POST"]
     }
 });

@@ -7,7 +7,7 @@ import io from 'socket.io-client';
 import GameRoom from './GameRoom';
 import Arena from './Arena';
 
-const SOCKET_SERVER_URL = 'http://localhost:3001';
+const SOCKET_SERVER_URL = process.env.NEXT_PUBLIC_SOCKET_SERVER_URL;
 
 export default function HomePage() {
 
