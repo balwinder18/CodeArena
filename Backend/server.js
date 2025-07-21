@@ -65,6 +65,15 @@ const PROBLEMS = [
     }
 ];
 
+const getPlayerState = (roomId, playerId) => {
+    const room = rooms[roomId];
+    if (room) {
+       
+        return room.players.find(p => p.id === playerId);
+    }
+    return null;
+};
+
 io.on('connection', (socket) => {
     console.log(`User connected: ${socket.id}`);
 

@@ -21,8 +21,6 @@ const PROBLEMS = [
             { input: [0, 0], expectedOutput: 0 },
             { input: [100, 200], expectedOutput: 300 },
         ],
-        // This snippet is used for the client-side simulation in `handleSubmitSolution`
-        correctSolutionSnippet: "return a + b;",
     },
     {
         id: 'multiplyByTen',
@@ -35,7 +33,6 @@ const PROBLEMS = [
             { input: [-5], expectedOutput: -50 },
             { input: [100], expectedOutput: 1000 },
         ],
-        correctSolutionSnippet: "return x * 10;",
     },
     {
         id: 'isEven',
@@ -49,28 +46,25 @@ const PROBLEMS = [
             { input: [100], expectedOutput: true },
             { input: [99], expectedOutput: false },
         ],
-        correctSolutionSnippet: "return n % 2 === 0;",
     }
 ];
 
 // Configuration for supported languages, including their Judge0 API ID and Monaco editor mode.
 const LANGUAGES = [
+   
     { id: 54, name: "C++", mode: "cpp" },
     { id: 62, name: "Java", mode: "java" },
 ];
 
-// Helper function to call the backend API for code execution.
+// Helper function to call the backend API for a single code execution.
 const runCodeAPI = async (code, languageId, input) => {
     try {
-        // In a real application, the '/api/execute' endpoint would point to your backend server
-        // which securely runs the code, possibly using a service like Judge0.
         const res = await fetch("/api/execute", {
             method: "POST",
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 source_code: code,
                 language_id: languageId,
-                // Standard input should be a string.
                 stdin: Array.isArray(input) ? input.join('\n') : String(input),
             }),
         });
@@ -89,14 +83,6 @@ const generateDefaultFunction = (problem, langMode) => {
     const paramInputs = problem.testCases[0].input;
 
     switch (langMode) {
-        case 'javascript':
-            const jsParams = paramInputs.map((_, i) => String.fromCharCode(97 + i)).join(', ');
-            return `function ${functionName}(${jsParams}) {\n  // Write your JavaScript code here\n}`;
-        
-        case 'python':
-            const pyParams = paramInputs.map((_, i) => String.fromCharCode(97 + i)).join(', ');
-            return `def ${functionName.toLowerCase()}(${pyParams}):\n  # Write your Python code here\n  pass`;
-
         case 'java': {
             const javaParamTypes = paramInputs.map(() => `int`); // Assuming int for simplicity
             const javaParams = javaParamTypes.map((type, i) => `${type} arg${i}`).join(', ');
@@ -198,8 +184,6 @@ const Arena = ({
     // Effect to listen for code updates from other players via WebSocket.
     useEffect(() => {
         const myPlayer = playersInRoom.find(p => p.id === socket?.id);
-        // This logic can be expanded to handle real-time collaborative editing more gracefully.
-        // For now, it just syncs the code if it's different.
         if (myPlayer && myPlayer.code && myPlayer.code !== codeValue) {
             // setCodeValue(myPlayer.code);
         }
@@ -214,7 +198,6 @@ const Arena = ({
     const handleEditorChange = (value) => {
         const newCode = value || '';
         setCodeValue(newCode);
-        // Emit code change to other players in the room for real-time collaboration.
         if (socket && currentRoomId) {
             socket.emit('codeChange', {
                 roomId: currentRoomId,
@@ -257,42 +240,71 @@ const Arena = ({
         setIsRunning(false);
     };
 
-    // Submits the solution for grading against all test cases (simulation).
-    const handleSubmitSolution = () => {
-        if (!socket || !currentRoomId || !currentProblem || gameStatus !== 'in-progress') {
-            showCustomModal("Game is not in progress or problem not loaded.");
+    // Submits the solution for grading by the backend and emits results to the server.
+    const handleSubmitSolution = async () => {
+        if (!currentProblem || isRunning || gameStatus !== 'in-progress') {
+            showCustomModal("Cannot submit right now. The game may not be in progress.");
             return;
         }
-
+    
+        setIsRunning(true);
+        setOutput('Submitting and running all test cases...');
         setMessage('Submitting solution...');
         setActiveBottomTab('result');
+    
+        try {
+            // This new API endpoint will handle running all test cases.
+            const response = await fetch('/api/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    source_code: codeValue,
+                    language_id: selectedLanguage.id,
+                    testCases: currentProblem.testCases,
+                }),
+            });
+    
+            const result = await response.json();
+    
+            if (response.ok) {
+                const { passedCount, totalCount } = result;
+    
+                // Emit the score update to the server so all players see the new score.
+                if(socket && currentRoomId) {
+                    socket.emit('submitSolution', { roomId: currentRoomId, passedTests: passedCount });
+                }
+    
+                // If all tests passed, emit a separate event to declare the winner.
+                if (passedCount === totalCount && socket && currentRoomId) {
+                    socket.emit('gameWon', { roomId: currentRoomId });
+                }
 
-        // --- Client-Side Simulation Logic ---
-        // In a real-world scenario, you would run all test cases on the backend.
-        // This simulation provides instant feedback for the demo.
-        let passedCount = 0;
-        const isCorrectSolutionPresent = codeValue.includes(currentProblem.correctSolutionSnippet);
+                // Update local UI with the result from the backend.
+                let submissionResult;
+                if (passedCount === totalCount) {
+                    submissionResult = `Congratulations! All ${totalCount} tests passed!`;
+                    setMessage("Solution submitted and all tests passed!");
+                } else {
+                    submissionResult = `Submission Result: Passed ${passedCount} out of ${totalCount} tests.\nKeep trying!`;
+                    setMessage(`Solution submitted. Passed: ${passedCount}/${totalCount}`);
+                }
+                setOutput(submissionResult);
 
-        if (isCorrectSolutionPresent) {
-            passedCount = currentProblem.testCases.length;
-        } else if (codeValue.includes("return")) {
-            // Give partial credit for a plausible attempt.
-            passedCount = Math.floor(currentProblem.testCases.length / 2);
+            } else {
+                // Handle errors returned from our own backend.
+                const errorMessage = `Error submitting solution: ${result.error || 'Unknown server error'}`;
+                setOutput(errorMessage);
+                showCustomModal(errorMessage);
+            }
+    
+        } catch (err) {
+            // Handle network errors (e.g., backend is down).
+            const networkError = `Network error: ${err.message}`;
+            setOutput(networkError);
+            showCustomModal('Could not connect to the submission service.');
+        } finally {
+            setIsRunning(false);
         }
-
-        // Emit the result to the server to update scores.
-        socket.emit('submitSolution', { roomId: currentRoomId, passedTests: passedCount });
-
-        // Update the local UI with the submission result.
-        let submissionResult;
-        if (passedCount === currentProblem.testCases.length) {
-            submissionResult = `Congratulations! All ${passedCount} tests passed!`;
-            setMessage("Solution submitted and all tests passed!");
-        } else {
-            submissionResult = `Submission Result: Passed ${passedCount} out of ${currentProblem.testCases.length} tests.\nKeep trying!`;
-            setMessage(`Solution submitted. Passed: ${passedCount}/${currentProblem.testCases.length}`);
-        }
-        setOutput(submissionResult);
     };
 
 
@@ -443,7 +455,7 @@ const Arena = ({
                                             disabled={isRunning || gameStatus !== 'in-progress'}
                                             className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md transition-transform transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
-                                            Submit
+                                            {isRunning ? 'Submitting...' : 'Submit'}
                                         </button>
                                     </>
                                 )}
