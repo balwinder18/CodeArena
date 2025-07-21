@@ -6,6 +6,7 @@ const shortid = require('shortid');
 
 const app = express();
 const server = http.createServer(app);
+require('dotenv').config();
 
 
 const io = new Server(server, {
@@ -93,6 +94,31 @@ io.on('connection', (socket) => {
         console.log(`Room ${roomId} created by ${playerName} (${socket.id})`);
     });
 
+
+    socket.on('leaveRoom', ({ roomId }) => {
+        console.log(`Server: Received 'leaveRoom' event from ${socket.id} for room ${roomId}`);
+        const room = rooms[roomId];
+        if (room) {
+            const playerIndex = room.players.findIndex(p => p.id === socket.id);
+            if (playerIndex !== -1) {
+                const playerName = room.players[playerIndex].name;
+                // Remove the player from the room
+                room.players.splice(playerIndex, 1);
+                socket.leave(roomId);
+
+                console.log(`${playerName} (${socket.id}) left room ${roomId}.`);
+
+                // If the room is now empty, delete it
+                if (room.players.length === 0) {
+                    delete rooms[roomId];
+                    console.log(`Room ${roomId} is empty and has been deleted.`);
+                } else {
+                    // Otherwise, notify the remaining player
+                    io.to(roomId).emit('playerLeftRoom', { players: room.players, playerName });
+                }
+            }
+        }
+    });
     
     socket.on('joinRoom', ({ roomId, playerName }) => {
         if (!rooms[roomId]) {

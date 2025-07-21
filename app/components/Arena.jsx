@@ -160,7 +160,7 @@ const Arena = ({
     winnerId,
     setMessage,
     showCustomModal,
-    resetGame
+     leaveRoom 
 }) => {
     // Find the current problem from the hardcoded list.
     const currentProblem = PROBLEMS.find(p => p.id === currentProblemId);
@@ -434,13 +434,13 @@ const Arena = ({
                                 )}
                             </div>
                             <div className="flex justify-end items-center mt-4 space-x-3">
-                                {gameStatus === 'finished' ? (
-                                     <button
-                                        onClick={resetGame}
-                                        className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-md transition-transform transform hover:scale-105 shadow-lg"
-                                    >
-                                        Reset Game
-                                    </button>
+                                 {gameStatus === 'finished' ? (
+                                <button
+                                    onClick={leaveRoom} // KEY CHANGE: Call the leaveRoom prop
+                                    className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-md transition-transform transform hover:scale-105 shadow-lg"
+                                >
+                                    Leave Room {/* KEY CHANGE: Updated button text */}
+                                </button>
                                 ) : (
                                     <>
                                         <button
