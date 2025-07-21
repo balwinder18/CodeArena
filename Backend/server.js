@@ -239,72 +239,32 @@ io.on('connection', (socket) => {
     // });
 
    
-    socket.on('submitSolution', ({ roomId, passedTests }) => {
-        console.log(`Server: Received submitSolution from ${socket.id} in room ${roomId} with ${passedTests} tests passed.`);
+       socket.on('submitSolution', ({ roomId, passedTests }) => {
+        console.log(`Submission from ${socket.id} in room ${roomId} with ${passedTests} tests passed.`);
         const room = rooms[roomId];
+        
+        // Ensure the room exists and the game is in progress
         if (!room || room.status !== 'in-progress') {
-            socket.emit('roomError', 'Game not in progress.');
             return;
         }
 
         const player = getPlayerState(roomId, socket.id);
         if (player) {
             player.passedTests = passedTests;
-            // Record submission time for tie-breaking
-            player.lastSubmissionTime = new Date().getTime();
 
-            // Broadcast test results to all clients in the room
+            // Broadcast the latest test results to everyone in the room
             io.to(roomId).emit('testResultsUpdate', { playerId: socket.id, passedTests });
-            console.log(`Server: Player ${player.name} (${socket.id}) in room ${roomId} submitted with ${passedTests} passed tests.`);
 
-            // Check for winner
+            // Check for a winner
             const problem = PROBLEMS.find(p => p.id === room.problemId);
             if (problem && passedTests === problem.testCases.length) {
-                // This player solved all tests
-                if (room.status !== 'finished') { // Prevent multiple winner declarations
-                    room.winnerId = socket.id;
-                    room.status = 'finished';
-                    io.to(roomId).emit('gameFinished', { winnerId: socket.id });
-                    console.log(`Server: Game in room ${roomId} finished. Winner: ${player.name}`);
-                }
-            } else {
-                // If the other player already solved, they are the winner
-                const otherPlayer = room.players.find(p => p.id !== socket.id);
-                if (otherPlayer && problem && otherPlayer.passedTests === problem.testCases.length) {
-                    if (room.status !== 'finished') { // Prevent multiple winner declarations
-                        room.winnerId = otherPlayer.id;
-                        room.status = 'finished';
-                        io.to(roomId).emit('gameFinished', { winnerId: otherPlayer.id });
-                        console.log(`Server: Game in room ${roomId} finished. Winner: ${otherPlayer.name}`);
-                    }
-                }
-            }
-            // If game is still in progress and both players have submitted (even partially)
-            // This logic should ideally be triggered when both players have submitted *and* the full solution isn't found
-            // For simplicity, we'll keep it here, but a more robust judge would handle this.
-            if (room.status === 'in-progress' && room.players.every(p => p.lastSubmissionTime !== null)) {
-                console.log(`Server: Both players submitted in room ${roomId}, determining winner based on partial results or time.`);
-                const p1 = room.players[0];
-                const p2 = room.players[1];
-
-                if (p1.passedTests > p2.passedTests) {
-                    room.winnerId = p1.id;
-                } else if (p2.passedTests > p1.passedTests) {
-                    room.winnerId = p2.id;
-                } else {
-                    // Tie in passed tests, check submission time (earlier time wins)
-                    if (p1.lastSubmissionTime < p2.lastSubmissionTime) {
-                        room.winnerId = p1.id;
-                    } else if (p2.lastSubmissionTime < p1.lastSubmissionTime) {
-                        room.winnerId = p2.id;
-                    } else {
-                        room.winnerId = 'draw'; // Actual draw
-                    }
-                }
+                // This player is the first to solve all test cases
+                room.winnerId = socket.id;
                 room.status = 'finished';
-                io.to(roomId).emit('gameFinished', { winnerId: room.winnerId });
-                console.log(`Server: Game in room ${roomId} finished by partial solutions/time. Winner: ${room.winnerId}`);
+                io.to(roomId).emit('gameFinished', { winnerId: socket.id });
+                console.log(`Game in room ${roomId} finished. Winner: ${player.name}`);
             }
+            // NOTE: All other logic for partial scores or time-based wins has been removed.
         }
     });
 
