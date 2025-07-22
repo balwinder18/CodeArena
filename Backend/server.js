@@ -50,20 +50,7 @@ const PROBLEMS = [
         ],
         correctSolutionSnippet: "return x * 10;",
     },
-    {
-        id: 'isEven',
-        title: "Is Even?",
-        description: "Write a function that takes a number `n` and returns `true` if it's even, `false` otherwise.",
-        example: "Input: n = 4\nOutput: true",
-        testCases: [
-            { input: [2], expectedOutput: true },
-            { input: [3], expectedOutput: false },
-            { input: [0], expectedOutput: true },
-            { input: [100], expectedOutput: true },
-            { input: [99], expectedOutput: false },
-        ],
-        correctSolutionSnippet: "return n % 2 === 0;",
-    }
+    
 ];
 
 const getPlayerState = (roomId, playerId) => {

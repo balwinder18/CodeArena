@@ -22,6 +22,9 @@ export default function HomePage() {
     const [gameStatus, setGameStatus] = useState('waiting'); // 'waiting', 'in-progress', 'finished'
     const [currentProblemId, setCurrentProblemId] = useState(null);
     const [winnerId, setWinnerId] = useState(null); // Socket ID of the winner
+     const [connectionStatus, setConnectionStatus] = useState('connecting');
+    const [countdown, setCountdown] = useState(60);
+
 
     const showCustomModal = (content) => {
         setModalContent(content);
@@ -32,6 +35,24 @@ export default function HomePage() {
         setShowModal(false);
         setModalContent('');
     };
+
+
+
+     useEffect(() => {
+        if (connectionStatus === 'connecting') {
+            const timer = setInterval(() => {
+                setCountdown(prev => {
+                    if (prev <= 1) {
+                        clearInterval(timer);
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+
+            return () => clearInterval(timer); // Cleanup interval on status change or unmount
+        }
+    }, [connectionStatus]);
 
     // Main useEffect for setting up the socket connection
     useEffect(() => {
@@ -52,10 +73,12 @@ export default function HomePage() {
         // --- CONNECTION LISTENERS ---
         const onConnect = () => {
             console.log('Connected to Socket.IO server:', socket.id);
+            setConnectionStatus('connected');
             setMessage('Connected to server. Choose to create or join a room!');
         };
         const onDisconnect = () => {
             console.log('Disconnected from Socket.IO server');
+             setConnectionStatus('disconnected');
             setMessage('Disconnected from server. Please refresh.');
             setCurrentRoomId(null);
             setPlayersInRoom([]);
@@ -291,6 +314,13 @@ export default function HomePage() {
                                      </button>
                                  </div>
                              </div>
+
+                             {connectionStatus === 'connecting' && (
+                                <div className="mt-4 text-center">
+                                    <p className="text-yellow-400 animate-pulse">Connecting to server...</p>
+                                    <p className="text-gray-400 text-sm">(Server can take up to {countdown} seconds to start.Wait!)</p>
+                                </div>
+                             )}
 
                              <p className="text-sm text-gray-500">
                                  Share room code to challenge a friend. No login needed.

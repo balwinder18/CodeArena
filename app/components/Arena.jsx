@@ -34,19 +34,7 @@ const PROBLEMS = [
             { input: [100], expectedOutput: 1000 },
         ],
     },
-    {
-        id: 'isEven',
-        title: "Is Even?",
-        description: "Write a function that takes a number `n` and returns `true` if it's even, `false` otherwise.",
-        example: "Input: n = 4\nOutput: true",
-        testCases: [
-            { input: [2], expectedOutput: true },
-            { input: [3], expectedOutput: false },
-            { input: [0], expectedOutput: true },
-            { input: [100], expectedOutput: true },
-            { input: [99], expectedOutput: false },
-        ],
-    }
+    
 ];
 
 // Configuration for supported languages, including their Judge0 API ID and Monaco editor mode.
