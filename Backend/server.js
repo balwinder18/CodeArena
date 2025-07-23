@@ -11,7 +11,7 @@ require('dotenv').config();
 
 const io = new Server(server, {
     cors: {
-        origin: process.env.FRONTEND_URL, // IMPORTANT: Change this to your React app's actual URL
+        origin: process.env.FRONTEND_URL, 
         methods: ["GET", "POST"]
     }
 });
@@ -89,18 +89,15 @@ io.on('connection', (socket) => {
             const playerIndex = room.players.findIndex(p => p.id === socket.id);
             if (playerIndex !== -1) {
                 const playerName = room.players[playerIndex].name;
-                // Remove the player from the room
                 room.players.splice(playerIndex, 1);
                 socket.leave(roomId);
 
                 console.log(`${playerName} (${socket.id}) left room ${roomId}.`);
 
-                // If the room is now empty, delete it
                 if (room.players.length === 0) {
                     delete rooms[roomId];
                     console.log(`Room ${roomId} is empty and has been deleted.`);
                 } else {
-                    // Otherwise, notify the remaining player
                     io.to(roomId).emit('playerLeftRoom', { players: room.players, playerName });
                 }
             }
@@ -214,23 +211,12 @@ io.on('connection', (socket) => {
     });
 
     
-    // socket.on('codeChange', ({ roomId, code }) => {
-    //     const room = rooms[roomId];
-    //     if (room && room.status === 'in-progress') {
-    //         const player = getPlayerState(roomId, socket.id);
-    //         if (player) {
-    //             player.code = code; 
-    //             socket.to(roomId).emit('codeUpdate', { playerId: socket.id, code });
-    //         }
-    //     }
-    // });
-
+   
    
        socket.on('submitSolution', ({ roomId, passedTests }) => {
         console.log(`Submission from ${socket.id} in room ${roomId} with ${passedTests} tests passed.`);
         const room = rooms[roomId];
         
-        // Ensure the room exists and the game is in progress
         if (!room || room.status !== 'in-progress') {
             return;
         }
@@ -239,19 +225,15 @@ io.on('connection', (socket) => {
         if (player) {
             player.passedTests = passedTests;
 
-            // Broadcast the latest test results to everyone in the room
             io.to(roomId).emit('testResultsUpdate', { playerId: socket.id, passedTests });
 
-            // Check for a winner
             const problem = PROBLEMS.find(p => p.id === room.problemId);
             if (problem && passedTests === problem.testCases.length) {
-                // This player is the first to solve all test cases
                 room.winnerId = socket.id;
                 room.status = 'finished';
                 io.to(roomId).emit('gameFinished', { winnerId: socket.id });
                 console.log(`Game in room ${roomId} finished. Winner: ${player.name}`);
             }
-            // NOTE: All other logic for partial scores or time-based wins has been removed.
         }
     });
 

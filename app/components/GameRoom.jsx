@@ -6,11 +6,10 @@ const GameRoom = ({
     currentRoomId,
     playersInRoom,
     gameStatus,
-    startGame // Passed down from App.js
+    startGame
 }) => {
     return (
         <div className="bg-gray-800 p-8 rounded-xl shadow-2xl border border-gray-700 w-full max-w-6xl flex flex-col lg:flex-row gap-8">
-            {/* Room Info and Player List */}
             <div className="flex-1 flex flex-col space-y-6">
                 <h2 className="text-3xl font-bold text-purple-400 mb-4">Room: {currentRoomId}</h2>
                 <p className="text-gray-300 text-lg">Welcome, <span className="font-semibold text-yellow-300">{playerName}</span>!</p>

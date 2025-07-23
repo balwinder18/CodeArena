@@ -2,12 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import Editor from "@monaco-editor/react";
 import { PanelGroup, Panel, PanelResizeHandle } from "react-resizable-panels";
 
-// This component simulates a competitive coding arena.
-// NOTE: The backend API for code execution (`/api/execute`) and the WebSocket server
-// are assumed to be implemented elsewhere. This component is the front-end portion.
 
-// Problem definitions are kept on the client for easy access to display
-// information and for referencing test cases.
 const PROBLEMS = [
     {
         id: 'sumTwoNumbers',
@@ -37,14 +32,12 @@ const PROBLEMS = [
     
 ];
 
-// Configuration for supported languages, including their Judge0 API ID and Monaco editor mode.
 const LANGUAGES = [
    
     { id: 54, name: "C++", mode: "cpp" },
     { id: 62, name: "Java", mode: "java" },
 ];
 
-// Helper function to call the backend API for a single code execution.
 const runCodeAPI = async (code, languageId, input) => {
     try {
         const res = await fetch("/api/execute", {
@@ -64,7 +57,6 @@ const runCodeAPI = async (code, languageId, input) => {
 };
 
 
-// Generates a default function template based on the problem and selected language.
 const generateDefaultFunction = (problem, langMode) => {
     if (!problem) return '';
     const functionName = problem.title.replace(/\s+/g, '');
@@ -150,18 +142,15 @@ const Arena = ({
     showCustomModal,
      leaveRoom 
 }) => {
-    // Find the current problem from the hardcoded list.
     const currentProblem = PROBLEMS.find(p => p.id === currentProblemId);
 
-    // Refs and State
     const editorInstanceRef = useRef(null);
     const [codeValue, setCodeValue] = useState('');
-    const [selectedLanguage, setSelectedLanguage] = useState(LANGUAGES[0]); // Default to JavaScript
-    const [activeBottomTab, setActiveBottomTab] = useState('testcase'); // 'testcase' or 'result'
-    const [output, setOutput] = useState(''); // For displaying results from run/submit
+    const [selectedLanguage, setSelectedLanguage] = useState(LANGUAGES[0]); 
+    const [activeBottomTab, setActiveBottomTab] = useState('testcase'); 
+    const [output, setOutput] = useState(''); 
     const [isRunning, setIsRunning] = useState(false);
 
-    // Effect to set initial code when the problem or language changes.
     useEffect(() => {
         if (currentProblem) {
             const newCode = generateDefaultFunction(currentProblem, selectedLanguage.mode);
@@ -169,7 +158,6 @@ const Arena = ({
         }
     }, [currentProblem, selectedLanguage]);
 
-    // Effect to listen for code updates from other players via WebSocket.
     useEffect(() => {
         const myPlayer = playersInRoom.find(p => p.id === socket?.id);
         if (myPlayer && myPlayer.code && myPlayer.code !== codeValue) {
@@ -182,7 +170,6 @@ const Arena = ({
         editorInstanceRef.current = editor;
     };
 
-    // Handles code changes in the editor.
     const handleEditorChange = (value) => {
         const newCode = value || '';
         setCodeValue(newCode);
@@ -194,7 +181,6 @@ const Arena = ({
         }
     };
     
-    // Handles language selection from the dropdown.
     const handleLanguageChange = (e) => {
         const langId = parseInt(e.target.value, 10);
         const lang = LANGUAGES.find(l => l.id === langId);
@@ -203,7 +189,6 @@ const Arena = ({
         }
     };
 
-    // Runs the code against the first test case for quick feedback.
     const handleRunCode = async () => {
         if (!currentProblem || isRunning) return;
 
@@ -228,7 +213,6 @@ const Arena = ({
         setIsRunning(false);
     };
 
-    // Submits the solution for grading by the backend and emits results to the server.
     const handleSubmitSolution = async () => {
         if (!currentProblem || isRunning || gameStatus !== 'in-progress') {
             showCustomModal("Cannot submit right now. The game may not be in progress.");
@@ -298,7 +282,6 @@ const Arena = ({
 
     return (
         <div className="flex flex-col h-[calc(100vh-8rem)] w-full bg-gray-900 text-gray-300 rounded-lg overflow-hidden border border-gray-700 shadow-xl">
-            {/* Top Bar within Arena */}
             <div className="flex justify-between items-center bg-gray-800 p-3 border-b border-gray-700">
                 <span className="text-lg font-semibold text-gray-200">Coding Arena</span>
                 <div className="flex items-center space-x-4">
@@ -317,9 +300,7 @@ const Arena = ({
                 </div>
             </div>
 
-            {/* Main Content Area: Resizable Panels */}
             <PanelGroup direction="horizontal" className="flex-1">
-                {/* Left Panel: Problem Description */}
                 <Panel defaultSize={40} minSize={25} className="flex flex-col p-6 border-r border-gray-700 overflow-y-auto bg-gray-800">
                     {currentProblem ? (
                         <>
@@ -337,7 +318,6 @@ const Arena = ({
                             <pre className="bg-gray-900 text-gray-200 p-4 rounded-md text-sm overflow-auto border border-gray-600">
                                 {currentProblem.example}
                             </pre>
-                             {/* Player Status below problem for score comparison */}
                              <div className="mt-auto pt-4 border-t border-gray-700">
                                  <h4 className="text-lg font-semibold text-gray-200 mb-2">Live Scores:</h4>
                                  <div className="grid grid-cols-1 gap-2">
@@ -373,7 +353,6 @@ const Arena = ({
                     <div className="w-1 h-8 bg-gray-500 rounded-full"></div>
                 </PanelResizeHandle>
 
-                {/* Right Panel: Code Editor and Controls */}
                 <Panel defaultSize={60} minSize={30} className="flex flex-col bg-gray-800">
                     <PanelGroup direction="vertical" className="flex-1">
                         <Panel defaultSize={70} minSize={50}>
@@ -424,10 +403,10 @@ const Arena = ({
                             <div className="flex justify-end items-center mt-4 space-x-3">
                                  {gameStatus === 'finished' ? (
                                 <button
-                                    onClick={leaveRoom} // KEY CHANGE: Call the leaveRoom prop
+                                    onClick={leaveRoom} 
                                     className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-md transition-transform transform hover:scale-105 shadow-lg"
                                 >
-                                    Leave Room {/* KEY CHANGE: Updated button text */}
+                                    Leave Room 
                                 </button>
                                 ) : (
                                     <>

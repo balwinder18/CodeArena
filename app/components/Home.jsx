@@ -5,7 +5,6 @@ import io from 'socket.io-client';
 import GameRoom from './GameRoom';
 import Arena from './Arena';
 
-// It's best practice to get this from environment variables
 const SOCKET_SERVER_URL = process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:3001';
 
 export default function HomePage() {
@@ -21,7 +20,7 @@ export default function HomePage() {
 
     const [gameStatus, setGameStatus] = useState('waiting'); // 'waiting', 'in-progress', 'finished'
     const [currentProblemId, setCurrentProblemId] = useState(null);
-    const [winnerId, setWinnerId] = useState(null); // Socket ID of the winner
+    const [winnerId, setWinnerId] = useState(null); 
      const [connectionStatus, setConnectionStatus] = useState('connecting');
     const [countdown, setCountdown] = useState(60);
 
@@ -50,27 +49,24 @@ export default function HomePage() {
                 });
             }, 1000);
 
-            return () => clearInterval(timer); // Cleanup interval on status change or unmount
+            return () => clearInterval(timer); 
         }
     }, [connectionStatus]);
 
-    // Main useEffect for setting up the socket connection
+    
     useEffect(() => {
         const newSocket = io(SOCKET_SERVER_URL);
         setSocket(newSocket);
 
-        // Clean up the connection when the component unmounts
         return () => {
             newSocket.disconnect();
         };
-    }, []); // This effect runs only once to establish the connection
-
-    // This separate useEffect handles all event listeners.
-    // It re-runs whenever `socket` or `playersInRoom` changes.
+    }, []);
+    
+    
     useEffect(() => {
         if (!socket) return;
 
-        // --- CONNECTION LISTENERS ---
         const onConnect = () => {
             console.log('Connected to Socket.IO server:', socket.id);
             setConnectionStatus('connected');
@@ -88,7 +84,6 @@ export default function HomePage() {
             setWinnerId(null);
         };
 
-        // --- ROOM LISTENERS ---
         const onRoomCreated = (data) => {
             console.log('Room created:', data);
             setCurrentRoomId(data.roomId);
@@ -114,7 +109,6 @@ export default function HomePage() {
             setSetupStep('landing');
         };
 
-        // --- PLAYER LISTENERS ---
         const onPlayerJoined = (data) => {
             console.log('Player joined room update:', data);
             setPlayersInRoom(data.players);
@@ -132,7 +126,6 @@ export default function HomePage() {
             }
         };
 
-        // --- GAME LISTENERS ---
         const onGameStarted = (data) => {
             console.log('Game started:', data);
             setGameStatus('in-progress');
@@ -198,7 +191,7 @@ export default function HomePage() {
             socket.off('gameFinished', onGameFinished);
             socket.off('gameReset', onGameReset);
         };
-    }, [socket, playersInRoom]); // Dependency array ensures listeners have fresh state
+    }, [socket, playersInRoom]); 
 
     const handleCreateMatchClick = () => {
         setSetupStep('createName');
@@ -244,7 +237,6 @@ export default function HomePage() {
     const leaveRoom = () => {
         if (!socket || !currentRoomId) return;
         socket.emit('leaveRoom', { roomId: currentRoomId });
-        // Reset local state immediately to return to the landing page
         setCurrentRoomId(null);
         setPlayersInRoom([]);
         setSetupStep('landing');
@@ -407,7 +399,7 @@ export default function HomePage() {
                         winnerId={winnerId}
                         setMessage={setMessage}
                         showCustomModal={showCustomModal}
-                        leaveRoom={leaveRoom} // Changed from backToLobby
+                        leaveRoom={leaveRoom} 
                     />
                 )
             )}
