@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import io from 'socket.io-client';
 import GameRoom from './GameRoom';
 import Arena from './Arena';
+import VideoTrial from './VideoTrial'
 
 const SOCKET_SERVER_URL = process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:3001';
 
@@ -420,6 +421,9 @@ export default function HomePage() {
                          <p className="text-sm text-gray-400">Increase Your Aura.</p>
                      </div>
                  </div>
+
+
+                 <VideoTrial/>
              </div>
            )}
         </div>
