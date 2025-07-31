@@ -284,6 +284,35 @@ const Arena = ({
         <div className="flex flex-col h-[calc(100vh-8rem)] w-full bg-gray-900 text-gray-300 rounded-lg overflow-hidden border border-gray-700 shadow-xl">
             <div className="flex justify-between items-center bg-gray-800 p-3 border-b border-gray-700">
                 <span className="text-lg font-semibold text-gray-200">Coding Arena</span>
+              <div className='flex flex-row gap-2'>
+               <div className="flex justify-end items-center space-x-3">
+                                 {gameStatus === 'finished' ? (
+                                <button
+                                    onClick={leaveRoom} 
+                                    className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-md transition-transform transform hover:scale-105 shadow-lg"
+                                >
+                                    Leave Room 
+                                </button>
+                                ) : (
+                                    <>
+                                        <button
+                                            onClick={handleRunCode}
+                                            disabled={isRunning || gameStatus !== 'in-progress'}
+                                            className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            {isRunning ? 'Running...' : 'Run Code'}
+                                        </button>
+                                        <button
+                                            onClick={handleSubmitSolution}
+                                            disabled={isRunning || gameStatus !== 'in-progress'}
+                                            className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md transition-transform transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            {isRunning ? 'Submitting...' : 'Submit'}
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+              
                 <div className="flex items-center space-x-4">
                      <select
                         value={selectedLanguage.id}
@@ -297,6 +326,7 @@ const Arena = ({
                             </option>
                         ))}
                     </select>
+                </div>
                 </div>
             </div>
 
@@ -398,33 +428,6 @@ const Arena = ({
                                 )}
                                 {activeBottomTab === 'result' && (
                                     <pre className="whitespace-pre-wrap">{output || 'Run or submit your code to see the result.'}</pre>
-                                )}
-                            </div>
-                            <div className="flex justify-end items-center mt-4 space-x-3">
-                                 {gameStatus === 'finished' ? (
-                                <button
-                                    onClick={leaveRoom} 
-                                    className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-md transition-transform transform hover:scale-105 shadow-lg"
-                                >
-                                    Leave Room 
-                                </button>
-                                ) : (
-                                    <>
-                                        <button
-                                            onClick={handleRunCode}
-                                            disabled={isRunning || gameStatus !== 'in-progress'}
-                                            className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            {isRunning ? 'Running...' : 'Run Code'}
-                                        </button>
-                                        <button
-                                            onClick={handleSubmitSolution}
-                                            disabled={isRunning || gameStatus !== 'in-progress'}
-                                            className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md transition-transform transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            {isRunning ? 'Submitting...' : 'Submit'}
-                                        </button>
-                                    </>
                                 )}
                             </div>
                         </Panel>

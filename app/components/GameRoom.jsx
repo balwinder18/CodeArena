@@ -1,4 +1,5 @@
 import React from 'react';
+import CopyButton from './Copybutton'
 
 const GameRoom = ({
     socket,
@@ -11,7 +12,10 @@ const GameRoom = ({
     return (
         <div className="bg-gray-800 p-8 rounded-xl shadow-2xl border border-gray-700 w-full max-w-6xl flex flex-col lg:flex-row gap-8">
             <div className="flex-1 flex flex-col space-y-6">
+                <div className='flex flex-row gap-3'>
                 <h2 className="text-3xl font-bold text-purple-400 mb-4">Room: {currentRoomId}</h2>
+                <CopyButton code={currentRoomId} />
+               </div>
                 <p className="text-gray-300 text-lg">Welcome, <span className="font-semibold text-yellow-300">{playerName}</span>!</p>
 
                 <div className="w-full">
@@ -30,6 +34,7 @@ const GameRoom = ({
                     <div className="bg-gray-700 p-6 rounded-lg shadow-inner border border-gray-600 text-center">
                         <p className="text-xl text-gray-300">Waiting for another player to join...</p>
                         <p className="text-gray-400 text-sm mt-2">Share this Room ID: <span className="font-mono text-pink-300">{currentRoomId}</span></p>
+                     
                     </div>
                 )}
 
