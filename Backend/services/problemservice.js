@@ -1,4 +1,4 @@
-const Problem = require('../models/problem.js');
+const Problem = require('../models/Problem.js');
 
 const getRandomProblem = async () => {
     const count = await Problem.countDocuments();
