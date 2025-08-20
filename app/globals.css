@@ -5,4 +5,9 @@
   --foreground: #171717;
 }
 
-
+.left-panel {
+  height: 100vh;       /* full screen height */
+  overflow-y: auto;    /* vertical scroll when content is long */
+  overflow-x: hidden;  /* no horizontal scroll */
+  padding: 1rem;       /* optional */
+}

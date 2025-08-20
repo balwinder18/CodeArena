@@ -3,11 +3,15 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const shortid = require('shortid'); 
+const connectdb = require('./services/db');
+const { getRandomProblem, getProblemById } = require('./services/problemservice');
 
 const app = express();
 const server = http.createServer(app);
 require('dotenv').config();
 
+
+connectdb();
 
 const io = new Server(server, {
     cors: {
@@ -22,36 +26,6 @@ const PORT = process.env.PORT || 3001;
 
 const rooms = {}; // { roomId: { players: [{ id, name }], status: 'waiting', ... } }
 
-const PROBLEMS = [
-    {
-        id: 'sumTwoNumbers',
-        title: "Sum of Two Numbers",
-        description: "Write a function that takes two numbers, `a` and `b`, and returns their sum.",
-        example: "Input: a = 5, b = 3\nOutput: 8",
-        testCases: [
-            { input: [1, 2], expectedOutput: 3 },
-            { input: [5, 5], expectedOutput: 10 },
-            { input: [-1, 1], expectedOutput: 0 },
-            { input: [0, 0], expectedOutput: 0 },
-            { input: [100, 200], expectedOutput: 300 },
-        ],
-        correctSolutionSnippet: "return a + b;",
-    },
-    {
-        id: 'multiplyByTen',
-        title: "Multiply by Ten",
-        description: "Write a function that takes a number `x` and returns `x` multiplied by 10.",
-        example: "Input: x = 7\nOutput: 70",
-        testCases: [
-            { input: [1], expectedOutput: 10 },
-            { input: [0], expectedOutput: 0 },
-            { input: [-5], expectedOutput: -50 },
-            { input: [100], expectedOutput: 1000 },
-        ],
-        correctSolutionSnippet: "return x * 10;",
-    },
-    
-];
 
 const getPlayerState = (roomId, playerId) => {
     const room = rooms[roomId];
@@ -103,6 +77,20 @@ io.on('connection', (socket) => {
             }
         }
     });
+
+   socket.on('giveUp', ({ roomId }) => {
+    const room = rooms[roomId];
+    if (!room) return;
+
+    const loser = room.players.find(p => p.id === socket.id);
+    const winner = room.players.find(p => p.id !== socket.id);
+
+    if (loser && winner) {
+        io.to(roomId).emit('playerGaveUp', { loser: loser.name, winner: winner.name });
+        delete rooms[roomId]; 
+    }
+});
+
     
     socket.on('joinRoom', ({ roomId, playerName }) => {
         if (!rooms[roomId]) {
@@ -171,7 +159,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('startGame', ({ roomId }) => {
+   socket.on('startGame', async ({ roomId }) => {
         console.log(`Server: Received 'startGame' event for room: ${roomId} from ${socket.id}`);
         const room = rooms[roomId];
         if (!room) {
@@ -190,11 +178,16 @@ io.on('connection', (socket) => {
             return;
         }
 
-      
-        const randomIndex = Math.floor(Math.random() * PROBLEMS.length);
-        const selectedProblem = PROBLEMS[randomIndex];
+        const selectedProblem = await getRandomProblem();
+
+        if (!selectedProblem) {
+            console.log(`Server: Error: No problems found in the database.`);
+            io.to(roomId).emit('roomError', 'Could not start the game. No problems are available.');
+            return;
+        }
 
         room.status = 'in-progress';
+        // We still store just the ID on the server for reference
         room.problemId = selectedProblem.id; 
         room.winnerId = null; 
 
@@ -205,15 +198,15 @@ io.on('connection', (socket) => {
             p.lastSubmissionTime = null; 
         });
 
+        // This is the corrected line that sends the FULL object
+        io.to(roomId).emit('gameStarted',  { problem: selectedProblem });
         
-        io.to(roomId).emit('gameStarted', { problemId: selectedProblem.id });
         console.log(`Server: Game started in room ${roomId} with problem: ${selectedProblem.title}`);
     });
-
     
    
    
-       socket.on('submitSolution', ({ roomId, passedTests }) => {
+       socket.on('submitSolution', async ({ roomId, passedTests }) => {
         console.log(`Submission from ${socket.id} in room ${roomId} with ${passedTests} tests passed.`);
         const room = rooms[roomId];
         
@@ -227,7 +220,7 @@ io.on('connection', (socket) => {
 
             io.to(roomId).emit('testResultsUpdate', { playerId: socket.id, passedTests });
 
-            const problem = PROBLEMS.find(p => p.id === room.problemId);
+            const problem = await getProblemById(room.problemId);
             if (problem && passedTests === problem.testCases.length) {
                 room.winnerId = socket.id;
                 room.status = 'finished';

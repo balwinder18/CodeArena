@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Copy } from 'lucide-react'; // or any icon library
+import { Copy } from 'lucide-react';
 
 export default function CopyButton({ code }) {
   const [copied, setCopied] = useState(false);

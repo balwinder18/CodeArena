@@ -3,43 +3,18 @@ import Editor from "@monaco-editor/react";
 import { PanelGroup, Panel, PanelResizeHandle } from "react-resizable-panels";
 
 
-const PROBLEMS = [
-    {
-        id: 'sumTwoNumbers',
-        title: "Sum of Two Numbers",
-        description: "Write a function that takes two numbers, `a` and `b`, and returns their sum.",
-        example: "Input: a = 5, b = 3\nOutput: 8",
-        testCases: [
-            { input: [1, 2], expectedOutput: 3 },
-            { input: [5, 5], expectedOutput: 10 },
-            { input: [-1, 1], expectedOutput: 0 },
-            { input: [0, 0], expectedOutput: 0 },
-            { input: [100, 200], expectedOutput: 300 },
-        ],
-    },
-    {
-        id: 'multiplyByTen',
-        title: "Multiply by Ten",
-        description: "Write a function that takes a number `x` and returns `x` multiplied by 10.",
-        example: "Input: x = 7\nOutput: 70",
-        testCases: [
-            { input: [1], expectedOutput: 10 },
-            { input: [0], expectedOutput: 0 },
-            { input: [-5], expectedOutput: -50 },
-            { input: [100], expectedOutput: 1000 },
-        ],
-    },
-    
-];
 
 const LANGUAGES = [
-   
+
     { id: 54, name: "C++", mode: "cpp" },
     { id: 62, name: "Java", mode: "java" },
 ];
 
 const runCodeAPI = async (code, languageId, input) => {
     try {
+
+        console.log(code);
+
         const res = await fetch("/api/execute", {
             method: "POST",
             headers: { 'Content-Type': 'application/json' },
@@ -58,70 +33,49 @@ const runCodeAPI = async (code, languageId, input) => {
 
 
 const generateDefaultFunction = (problem, langMode) => {
-    if (!problem) return '';
-    const functionName = problem.title.replace(/\s+/g, '');
-    const paramInputs = problem.testCases[0].input;
+    if (!problem || !problem.testCases || problem.testCases.length === 0) return '';
 
     switch (langMode) {
         case 'java': {
-            const javaParamTypes = paramInputs.map(() => `int`); // Assuming int for simplicity
-            const javaParams = javaParamTypes.map((type, i) => `${type} arg${i}`).join(', ');
-            const scannerLines = javaParamTypes.map((_, i) => `int arg${i} = sc.nextInt();`).join('\n        ');
-            const functionCallParams = javaParamTypes.map((_, i) => `arg${i}`).join(', ');
-
             return `import java.util.*;
 
-// Do not change the class name
 public class Main {
-    
-    /**
-     * This is the method you need to implement.
-     */
-    public int ${functionName}(${javaParams}) {
-        // Write your solution logic here
-        return 0; 
-    }
-
-    // --- Boilerplate - Do not edit below this line ---
     public static void main(String[] args) {
-        Main solution = new Main();
         Scanner sc = new Scanner(System.in);
         
-        ${scannerLines}
+        // TODO: Read input here
+        // Example:
+        // int n = sc.nextInt();
+        // int[] arr = new int[n];
+        // for (int i = 0; i < n; i++) arr[i] = sc.nextInt();
         
-        System.out.println(solution.${functionName}(${functionCallParams}));
+        // TODO: Write your solution logic here
+        
+        // TODO: Print the output
+        // System.out.println(answer);
         
         sc.close();
     }
 }`;
         }
         case 'cpp': {
-            const cppParamTypes = paramInputs.map(() => `int`);
-            const cppParams = cppParamTypes.map((type, i) => `${type} arg${i}`).join(', ');
-            const cinLines = cppParamTypes.map((_, i) => `    int arg${i};\n    std::cin >> arg${i};`).join('\n');
-            const cppCallParams = cppParamTypes.map((_, i) => `arg${i}`).join(', ');
+            return `#include <bits/stdc++.h>
+using namespace std;
 
-            return `#include <iostream>
-
-class Solution {
-public:
-    /**
-     * This is the method you need to implement.
-     */
-    int ${functionName}(${cppParams}) {
-        // Write your solution logic here
-        return 0;
-    }
-};
-
-// --- Boilerplate - Do not edit below this line ---
 int main() {
-    Solution solution;
-${cinLines}
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+
+    // TODO: Read input here
+    // int n; cin >> n;
+    // vector<int> arr(n);
+    // for (int i = 0; i < n; i++) cin >> arr[i];
     
-    int result = solution.${functionName}(${cppCallParams});
-    std::cout << result << std::endl;
+    // TODO: Write your solution logic here
     
+    // TODO: Print output
+    // cout << answer << "\\n";
+
     return 0;
 }`;
         }
@@ -136,19 +90,20 @@ const Arena = ({
     currentRoomId,
     playersInRoom,
     gameStatus,
-    currentProblemId,
+    currentProblem,
     winnerId,
     setMessage,
     showCustomModal,
-     leaveRoom 
+    leaveRoom,
+    giveUp
 }) => {
-    const currentProblem = PROBLEMS.find(p => p.id === currentProblemId);
+
 
     const editorInstanceRef = useRef(null);
     const [codeValue, setCodeValue] = useState('');
-    const [selectedLanguage, setSelectedLanguage] = useState(LANGUAGES[0]); 
-    const [activeBottomTab, setActiveBottomTab] = useState('testcase'); 
-    const [output, setOutput] = useState(''); 
+    const [selectedLanguage, setSelectedLanguage] = useState(LANGUAGES[0]);
+    const [activeBottomTab, setActiveBottomTab] = useState('testcase');
+    const [output, setOutput] = useState('');
     const [isRunning, setIsRunning] = useState(false);
 
     useEffect(() => {
@@ -156,6 +111,7 @@ const Arena = ({
             const newCode = generateDefaultFunction(currentProblem, selectedLanguage.mode);
             setCodeValue(newCode);
         }
+        console.log(currentProblem);
     }, [currentProblem, selectedLanguage]);
 
     useEffect(() => {
@@ -180,7 +136,7 @@ const Arena = ({
             });
         }
     };
-    
+
     const handleLanguageChange = (e) => {
         const langId = parseInt(e.target.value, 10);
         const lang = LANGUAGES.find(l => l.id === langId);
@@ -218,12 +174,12 @@ const Arena = ({
             showCustomModal("Cannot submit right now. The game may not be in progress.");
             return;
         }
-    
+
         setIsRunning(true);
         setOutput('Submitting and running all test cases...');
         setMessage('Submitting solution...');
         setActiveBottomTab('result');
-    
+
         try {
             // This new API endpoint will handle running all test cases.
             const response = await fetch('/api/submit', {
@@ -235,17 +191,17 @@ const Arena = ({
                     testCases: currentProblem.testCases,
                 }),
             });
-    
+
             const result = await response.json();
-    
+
             if (response.ok) {
                 const { passedCount, totalCount } = result;
-    
+
                 // Emit the score update to the server so all players see the new score.
-                if(socket && currentRoomId) {
+                if (socket && currentRoomId) {
                     socket.emit('submitSolution', { roomId: currentRoomId, passedTests: passedCount });
                 }
-    
+
                 // If all tests passed, emit a separate event to declare the winner.
                 if (passedCount === totalCount && socket && currentRoomId) {
                     socket.emit('gameWon', { roomId: currentRoomId });
@@ -268,7 +224,7 @@ const Arena = ({
                 setOutput(errorMessage);
                 showCustomModal(errorMessage);
             }
-    
+
         } catch (err) {
             // Handle network errors (e.g., backend is down).
             const networkError = `Network error: ${err.message}`;
@@ -284,95 +240,137 @@ const Arena = ({
         <div className="flex flex-col h-[calc(100vh-8rem)] w-full bg-gray-900 text-gray-300 rounded-lg overflow-hidden border border-gray-700 shadow-xl">
             <div className="flex justify-between items-center bg-gray-800 p-3 border-b border-gray-700">
                 <span className="text-lg font-semibold text-gray-200">Coding Arena</span>
-              <div className='flex flex-row gap-2'>
-               <div className="flex justify-end items-center space-x-3">
-                                 {gameStatus === 'finished' ? (
-                                <button
-                                    onClick={leaveRoom} 
-                                    className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-md transition-transform transform hover:scale-105 shadow-lg"
+                <div className='flex flex-row gap-2'>
+                    <div className="flex justify-end items-center space-x-3">
+                        {gameStatus === 'finished' ? (
+                            <button
+                                onClick={leaveRoom}
+                                className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-md transition-transform transform hover:scale-105 shadow-lg"
+                            >
+                                Leave Room
+                            </button>
+                        ) : (
+                            <>
+
+                            <button
+                                    onClick={giveUp}
+                                    disabled={isRunning || gameStatus !== 'in-progress'}
+                                    className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    Leave Room 
+                                    Give Up.
                                 </button>
-                                ) : (
-                                    <>
-                                        <button
-                                            onClick={handleRunCode}
-                                            disabled={isRunning || gameStatus !== 'in-progress'}
-                                            className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            {isRunning ? 'Running...' : 'Run Code'}
-                                        </button>
-                                        <button
-                                            onClick={handleSubmitSolution}
-                                            disabled={isRunning || gameStatus !== 'in-progress'}
-                                            className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md transition-transform transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            {isRunning ? 'Submitting...' : 'Submit'}
-                                        </button>
-                                    </>
-                                )}
-                            </div>
-              
-                <div className="flex items-center space-x-4">
-                     <select
-                        value={selectedLanguage.id}
-                        onChange={handleLanguageChange}
-                        disabled={isRunning || gameStatus === 'finished'}
-                        className="p-2 rounded-md bg-gray-700 text-white border border-gray-600 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors disabled:opacity-60"
-                    >
-                        {LANGUAGES.map((lang) => (
-                            <option key={lang.id} value={lang.id}>
-                                {lang.name}
-                            </option>
-                        ))}
-                    </select>
-                </div>
+                                <button
+                                    onClick={handleRunCode}
+                                    disabled={isRunning || gameStatus !== 'in-progress'}
+                                    className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isRunning ? 'Running...' : 'Run Code'}
+                                </button>
+                                <button
+                                    onClick={handleSubmitSolution}
+                                    disabled={isRunning || gameStatus !== 'in-progress'}
+                                    className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md transition-transform transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isRunning ? 'Submitting...' : 'Submit'}
+                                </button>
+                            </>
+                        )}
+                    </div>
+
+                    <div className="flex items-center space-x-4">
+                        <select
+                            value={selectedLanguage.id}
+                            onChange={handleLanguageChange}
+                            disabled={isRunning || gameStatus === 'finished'}
+                            className="p-2 rounded-md bg-gray-700 text-white border border-gray-600 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors disabled:opacity-60"
+                        >
+                            {LANGUAGES.map((lang) => (
+                                <option key={lang.id} value={lang.id}>
+                                    {lang.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
             </div>
 
             <PanelGroup direction="horizontal" className="flex-1">
                 <Panel defaultSize={40} minSize={25} className="flex flex-col p-6 border-r border-gray-700 overflow-y-auto bg-gray-800">
                     {currentProblem ? (
-                        <>
+                        <> 
+                         <div className="flex-1 overflow-y-auto">
                             <div className="flex border-b border-gray-700 mb-4">
-                                <button className="px-4 py-2 text-sm font-medium text-blue-400 border-b-2 border-blue-400">Description</button>
+                                <button className="px-4 py-2 text-sm font-medium text-blue-400 border-b-2 border-blue-400">
+                                    Description
+                                </button>
                             </div>
+
                             <h3 className="text-xl font-bold text-gray-100 mb-2">{currentProblem.title}</h3>
+
                             <div className="flex items-center space-x-2 text-sm mb-4">
-                                <span className="px-2 py-1 rounded-full bg-green-600 text-white">Easy</span>
+                                <span className="px-2 py-1 rounded-full bg-green-600 text-white">
+                                    {currentProblem.difficulty}
+                                </span>
                                 <span className="text-gray-500">|</span>
                                 <span className="text-gray-500">Room: {currentRoomId}</span>
                             </div>
-                            <p className="text-gray-300 text-sm mb-4 leading-relaxed">{currentProblem.description}</p>
-                            <h4 className="text-lg font-semibold text-gray-200 mt-4 mb-2">Example:</h4>
+
+                            {/* Problem Statement */}
+                            <p className="text-gray-300 text-sm mb-4 leading-relaxed">
+                                {currentProblem.description}
+                            </p>
+
+                            {/* Input Format */}
+                            <h4 className="text-lg font-semibold text-gray-200 mt-4 mb-2">
+                                Input Format:
+                            </h4>
+                            <p className="text-gray-300 text-sm mb-4 leading-relaxed">
+                                {currentProblem.inputFormat}
+                            </p>
+
+                            {/* Output Format */}
+                            <h4 className="text-lg font-semibold text-gray-200 mt-4 mb-2">
+                                Output Format:
+                            </h4>
+                            <p className="text-gray-300 text-sm mb-4 leading-relaxed">
+                                {currentProblem.outputFormat}
+                            </p>
+
+                            {/* Example */}
+                            <h4 className="text-lg font-semibold text-gray-200 mt-4 mb-2">
+                                Example:
+                            </h4>
                             <pre className="bg-gray-900 text-gray-200 p-4 rounded-md text-sm overflow-auto border border-gray-600">
                                 {currentProblem.example}
                             </pre>
-                             <div className="mt-auto pt-4 border-t border-gray-700">
-                                 <h4 className="text-lg font-semibold text-gray-200 mb-2">Live Scores:</h4>
-                                 <div className="grid grid-cols-1 gap-2">
-                                     {playersInRoom.map((player) => {
-                                         const isCurrentPlayer = player.id === socket?.id;
-                                         const isWinner = winnerId === player.id;
-                                         const statusColor = isWinner ? 'text-yellow-400' : (isCurrentPlayer ? 'text-blue-400' : 'text-gray-400');
+                            </div>
 
-                                         return (
-                                             <div key={player.id} className="flex items-center justify-between text-sm p-2 bg-gray-900 rounded-md">
-                                                 <span className={`${statusColor} font-medium flex items-center`}>
-                                                     <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"></path></svg>
-                                                     {player.name} {isCurrentPlayer && "(You)"}
-                                                 </span>
-                                                 <div className="flex items-center">
+                            <div className="mt-auto pt-4 border-t border-gray-700">
+                                <h4 className="text-lg font-semibold text-gray-200 mb-2">Live Scores:</h4>
+                                <div className="grid grid-cols-1 gap-2">
+                                    {playersInRoom.map((player) => {
+                                        const isCurrentPlayer = player.id === socket?.id;
+                                        const isWinner = winnerId === player.id;
+                                        const statusColor = isWinner ? 'text-yellow-400' : (isCurrentPlayer ? 'text-blue-400' : 'text-gray-400');
+
+                                        return (
+                                            <div key={player.id} className="flex items-center justify-between text-sm p-2 bg-gray-900 rounded-md">
+                                                <span className={`${statusColor} font-medium flex items-center`}>
+                                                    <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"></path></svg>
+                                                    {player.name} {isCurrentPlayer && "(You)"}
+                                                </span>
+                                                <div className="flex items-center">
                                                     <span className="text-green-400 font-bold">
                                                         {player.passedTests} / {currentProblem.testCases.length}
                                                     </span>
                                                     {isWinner && <span className="ml-3 text-xs bg-yellow-500 text-black px-2 py-1 rounded-full font-bold">WINNER!</span>}
-                                                 </div>
-                                             </div>
-                                         );
-                                     })}
-                                 </div>
-                             </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            
+                            </div>
                         </>
                     ) : (
                         <div className="text-center text-gray-400">Waiting for the game to start...</div>
@@ -424,7 +422,9 @@ const Arena = ({
                             </div>
                             <div className="bg-gray-900 p-3 rounded-md text-sm text-gray-300 flex-1 overflow-y-auto border border-gray-700">
                                 {activeBottomTab === 'testcase' && (
-                                    <pre>Input: {currentProblem ? JSON.stringify(currentProblem.testCases[0].input, null, 2) : 'N/A'}</pre>
+                                    <pre>
+                                        Input: {currentProblem ? currentProblem.testCases[0].input : 'N/A'}
+                                    </pre>
                                 )}
                                 {activeBottomTab === 'result' && (
                                     <pre className="whitespace-pre-wrap">{output || 'Run or submit your code to see the result.'}</pre>

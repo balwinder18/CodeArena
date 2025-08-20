@@ -22,11 +22,11 @@ export default function HomePage() {
     const [setupStep, setSetupStep] = useState('landing');
 
     const [gameStatus, setGameStatus] = useState('waiting'); // 'waiting', 'in-progress', 'finished'
-    const [currentProblemId, setCurrentProblemId] = useState(null);
+    const [currentProblem, setCurrentProblem] = useState(null);
     const [winnerId, setWinnerId] = useState(null);
     const [connectionStatus, setConnectionStatus] = useState('connecting');
     const [countdown, setCountdown] = useState(60);
-    const [count, setCount] = useState(10);
+    const [count, setCount] = useState(5);
     const[matchstart , setMatchstart] = useState(false);
   
 
@@ -85,7 +85,7 @@ export default function HomePage() {
             setPlayersInRoom([]);
             setSetupStep('landing');
             setGameStatus('waiting');
-            setCurrentProblemId(null);
+            setCurrentProblem(null)
             setWinnerId(null);
         };
 
@@ -104,7 +104,7 @@ export default function HomePage() {
             setMessage(`Joined room: ${data.roomId}`);
             setSetupStep('inRoom');
             setGameStatus(data.gameStatus || 'waiting');
-            setCurrentProblemId(data.problemId);
+            setCurrentProblem(data.problem);
             setWinnerId(data.winnerId);
         };
         const onRoomError = (errorMessage) => {
@@ -125,16 +125,22 @@ export default function HomePage() {
             setMessage(`${data.playerName} left the room.`);
             if (data.players.length < 2 && data.gameStatus === 'in-progress') {
                 setGameStatus('waiting');
-                setCurrentProblemId(null);
+                setCurrentProblem(null);
                 setWinnerId(null);
                 showCustomModal(`${data.playerName} left. The game has been reset.`);
             }
         };
+const onGameStarted = (data) => {
+            // Log the entire data payload to see what's arriving from the server
+            console.log('Received gameStarted event with data:', data);
 
-        const onGameStarted = (data) => {
-            console.log('Game started:', data);
+            // Destructure the 'problem' object directly from the data payload
+            const { problem } = data;
+            console.log('Destructured problem object:', problem); // Check what this is
+            
             setGameStatus('in-progress');
-            setCurrentProblemId(data.problemId);
+            // Set the full problem object into state
+            setCurrentProblem(problem);
             setWinnerId(null);
             setPlayersInRoom(prevPlayers => prevPlayers.map(p => ({ ...p, code: '', passedTests: 0 })));
             setMessage('Game started! Good luck!');
@@ -163,11 +169,26 @@ export default function HomePage() {
 
         const onGameReset = () => {
             setGameStatus('waiting');
-            setCurrentProblemId(null);
+            setCurrentProblem(null);
             setWinnerId(null);
             setPlayersInRoom(prevPlayers => prevPlayers.map(p => ({ ...p, code: '', passedTests: 0 })));
             setMessage('Game has been reset. Waiting for players to start a new round.');
         };
+
+        const onPlayerGaveUp = ({ loser, winner }) => {
+        if (loser === playerName) {
+            setMessage(`You gave up. ${winner} wins.`);
+             showCustomModal(`You gave up! Winner: ${winner}`);
+        } else {
+            setMessage(`${loser} gave up. You are the winner! 🎉`);
+            setWinnerId(socket.id);
+             showCustomModal(`Opponent gave up! Winner: ${winner}`);
+        }
+
+        // Reset everything after match ends
+        setGameStatus('finished');
+        
+    };
 
         // Register all listeners
         socket.on('connect', onConnect);
@@ -181,6 +202,7 @@ export default function HomePage() {
         socket.on('testResultsUpdate', onTestResultsUpdate);
         socket.on('gameFinished', onGameFinished);
         socket.on('gameReset', onGameReset);
+        socket.on('playerGaveUp', onPlayerGaveUp);
 
         // Cleanup function to remove listeners
         return () => {
@@ -195,6 +217,7 @@ export default function HomePage() {
             socket.off('testResultsUpdate', onTestResultsUpdate);
             socket.off('gameFinished', onGameFinished);
             socket.off('gameReset', onGameReset);
+            socket.off('playerGaveUp', onPlayerGaveUp);
         };
     }, [socket, playersInRoom]);
 
@@ -246,11 +269,19 @@ export default function HomePage() {
         setPlayersInRoom([]);
         setSetupStep('landing');
         setGameStatus('waiting');
-        setCurrentProblemId(null);
+        setCurrentProblem(null);
         setWinnerId(null);
         setMessage('You have left the room.');
     };
 
+   const giveUp = () => {
+    if (!socket || !currentRoomId) return;
+
+    socket.emit('giveUp', { roomId: currentRoomId });
+
+    // Temporary UI feedback
+    setMessage('You gave up. Waiting for result...');
+};
 
 
 
@@ -416,17 +447,18 @@ export default function HomePage() {
 <>
                   
                       {matchstart ? (
-                      <Arena
-                        socket={socket}
-                        currentRoomId={currentRoomId}
-                        playersInRoom={playersInRoom}
-                        gameStatus={gameStatus}
-                        currentProblemId={currentProblemId}
-                        winnerId={winnerId}
-                        setMessage={setMessage}
-                        showCustomModal={showCustomModal}
-                        leaveRoom={leaveRoom} 
-                    />
+                       <Arena
+                                socket={socket}
+                                currentRoomId={currentRoomId}
+                                playersInRoom={playersInRoom}
+                                gameStatus={gameStatus}
+                                currentProblem={currentProblem}
+                                winnerId={winnerId}
+                                setMessage={setMessage}
+                                showCustomModal={showCustomModal}
+                                leaveRoom={leaveRoom}
+                                giveUp={giveUp}
+                            />
                     ) : (
 
   <div className=" text-white flex flex-col items-center justify-center">
