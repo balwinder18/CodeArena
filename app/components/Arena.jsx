@@ -12,9 +12,6 @@ const LANGUAGES = [
 
 const runCodeAPI = async (code, languageId, input) => {
     try {
-
-        console.log(code);
-
         const res = await fetch("/api/execute", {
             method: "POST",
             headers: { 'Content-Type': 'application/json' },
@@ -54,7 +51,6 @@ public class Main {
         // TODO: Print the output
         // System.out.println(answer);
         
-        sc.close();
     }
 }`;
         }
@@ -111,13 +107,12 @@ const Arena = ({
             const newCode = generateDefaultFunction(currentProblem, selectedLanguage.mode);
             setCodeValue(newCode);
         }
-        console.log(currentProblem);
     }, [currentProblem, selectedLanguage]);
 
     useEffect(() => {
         const myPlayer = playersInRoom.find(p => p.id === socket?.id);
         if (myPlayer && myPlayer.code && myPlayer.code !== codeValue) {
-            // setCodeValue(myPlayer.code);
+
         }
     }, [playersInRoom, socket?.id, codeValue]);
 
@@ -181,7 +176,6 @@ const Arena = ({
         setActiveBottomTab('result');
 
         try {
-            // This new API endpoint will handle running all test cases.
             const response = await fetch('/api/submit', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -196,18 +190,14 @@ const Arena = ({
 
             if (response.ok) {
                 const { passedCount, totalCount } = result;
-
-                // Emit the score update to the server so all players see the new score.
-                if (socket && currentRoomId) {
+            if (socket && currentRoomId) {
                     socket.emit('submitSolution', { roomId: currentRoomId, passedTests: passedCount });
                 }
 
-                // If all tests passed, emit a separate event to declare the winner.
                 if (passedCount === totalCount && socket && currentRoomId) {
                     socket.emit('gameWon', { roomId: currentRoomId });
                 }
 
-                // Update local UI with the result from the backend.
                 let submissionResult;
                 if (passedCount === totalCount) {
                     submissionResult = `Congratulations! All ${totalCount} tests passed!`;
@@ -219,14 +209,12 @@ const Arena = ({
                 setOutput(submissionResult);
 
             } else {
-                // Handle errors returned from our own backend.
                 const errorMessage = `Error submitting solution: ${result.error || 'Unknown server error'}`;
                 setOutput(errorMessage);
                 showCustomModal(errorMessage);
             }
 
         } catch (err) {
-            // Handle network errors (e.g., backend is down).
             const networkError = `Network error: ${err.message}`;
             setOutput(networkError);
             showCustomModal('Could not connect to the submission service.');

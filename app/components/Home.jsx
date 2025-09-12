@@ -73,12 +73,10 @@ export default function HomePage() {
         if (!socket) return;
 
         const onConnect = () => {
-            console.log('Connected to Socket.IO server:', socket.id);
             setConnectionStatus('connected');
             setMessage('Connected to server. Choose to create or join a room!');
         };
         const onDisconnect = () => {
-            console.log('Disconnected from Socket.IO server');
             setConnectionStatus('disconnected');
             setMessage('Disconnected from server. Please refresh.');
             setCurrentRoomId(null);
@@ -90,7 +88,6 @@ export default function HomePage() {
         };
 
         const onRoomCreated = (data) => {
-            console.log('Room created:', data);
             setCurrentRoomId(data.roomId);
             setPlayersInRoom(data.players);
             setMessage(`Room created! Share this ID: ${data.roomId}`);
@@ -98,7 +95,6 @@ export default function HomePage() {
             setGameStatus('waiting');
         };
         const onRoomJoined = (data) => {
-            console.log('Room joined:', data);
             setCurrentRoomId(data.roomId);
             setPlayersInRoom(data.players);
             setMessage(`Joined room: ${data.roomId}`);
@@ -108,19 +104,16 @@ export default function HomePage() {
             setWinnerId(data.winnerId);
         };
         const onRoomError = (errorMessage) => {
-            console.error('Room error:', errorMessage);
             showCustomModal(`Error: ${errorMessage}`);
             setMessage(`Error: ${errorMessage}`);
             setSetupStep('landing');
         };
 
         const onPlayerJoined = (data) => {
-            console.log('Player joined room update:', data);
             setPlayersInRoom(data.players);
             setMessage(`${data.playerName} joined the room!`);
         };
         const onPlayerLeft = (data) => {
-            console.log('Player left room update:', data);
             setPlayersInRoom(data.players);
             setMessage(`${data.playerName} left the room.`);
             if (data.players.length < 2 && data.gameStatus === 'in-progress') {
@@ -131,15 +124,9 @@ export default function HomePage() {
             }
         };
 const onGameStarted = (data) => {
-            // Log the entire data payload to see what's arriving from the server
-            console.log('Received gameStarted event with data:', data);
-
-            // Destructure the 'problem' object directly from the data payload
             const { problem } = data;
-            console.log('Destructured problem object:', problem); // Check what this is
             
             setGameStatus('in-progress');
-            // Set the full problem object into state
             setCurrentProblem(problem);
             setWinnerId(null);
             setPlayersInRoom(prevPlayers => prevPlayers.map(p => ({ ...p, code: '', passedTests: 0 })));
@@ -184,13 +171,10 @@ const onGameStarted = (data) => {
             setWinnerId(socket.id);
              showCustomModal(`Opponent gave up! Winner: ${winner}`);
         }
-
-        // Reset everything after match ends
         setGameStatus('finished');
         
     };
 
-        // Register all listeners
         socket.on('connect', onConnect);
         socket.on('disconnect', onDisconnect);
         socket.on('roomCreated', onRoomCreated);
@@ -204,7 +188,6 @@ const onGameStarted = (data) => {
         socket.on('gameReset', onGameReset);
         socket.on('playerGaveUp', onPlayerGaveUp);
 
-        // Cleanup function to remove listeners
         return () => {
             socket.off('connect', onConnect);
             socket.off('disconnect', onDisconnect);
@@ -279,7 +262,6 @@ const onGameStarted = (data) => {
 
     socket.emit('giveUp', { roomId: currentRoomId });
 
-    // Temporary UI feedback
     setMessage('You gave up. Waiting for result...');
 };
 
