@@ -104,6 +104,7 @@ io.on('connection', (socket) => {
     socket.on('leaveRoom', async ({ roomId }) => {
         console.log(`Server: Received 'leaveRoom' event from ${socket.id} for room ${roomId}`);
         const room =await getRoom(roomId);
+        if (!room) return;
         if (room) {
             const playerIndex = room.players.findIndex(p => p.id === socket.id);
             if (playerIndex !== -1) {
@@ -188,6 +189,7 @@ io.on('connection', (socket) => {
         console.log(`User disconnected: ${socket.id}`);
 
         const roomId = await getPlayerMap(socket.id);
+        if (!room) return;
         
         if (roomId) {
             const room =await getRoom(roomId);
