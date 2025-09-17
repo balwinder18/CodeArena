@@ -10,7 +10,7 @@ const GameRoom = ({
     startGame
 }) => {
     return (
-        <div className="bg-gray-800 p-8 rounded-xl shadow-2xl border border-gray-700 w-full max-w-6xl flex flex-col lg:flex-row gap-8">
+        <div className="bg-gray-900 p-8 rounded-xl shadow-2xl border border-gray-800 w-full max-w-6xl flex flex-col lg:flex-row gap-8">
             <div className="flex-1 flex flex-col space-y-6">
                 <div className='flex flex-row gap-3'>
                 <h2 className="text-3xl font-bold text-purple-400 mb-4">Room: {currentRoomId}</h2>

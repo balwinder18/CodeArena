@@ -189,7 +189,8 @@ io.on('connection', (socket) => {
         console.log(`User disconnected: ${socket.id}`);
 
         const roomId = await getPlayerMap(socket.id);
-        if (!room) return;
+
+        if (!roomId) return;
         
         if (roomId) {
             const room =await getRoom(roomId);

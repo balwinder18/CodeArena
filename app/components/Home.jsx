@@ -282,7 +282,7 @@ const onGameStarted = (data) => {
 
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-700 text-white font-sans p-4 flex flex-col items-center">
+        <div className="min-h-screen bg-gradient-to-tr from-black via-gray-950 to-black text-white font-sans p-4 flex flex-col items-center">
 
             {showModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
@@ -298,9 +298,10 @@ const onGameStarted = (data) => {
                 </div>
             )}
 
-            <h1 className="text-5xl font-extrabold mb-8 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600 animate-pulse">
-                Code Arena
-            </h1>
+           <h1 className="text-6xl font-extrabold mb-8 tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-500 to-pink-600 drop-shadow-[0_0_20px_rgba(139,92,246,0.8)]">
+  Code Arena
+</h1>
+
 
             {!currentRoomId ? (
                 <>
@@ -313,14 +314,15 @@ const onGameStarted = (data) => {
                                 Compete in Code. <br />
                                 Win in Real-Time.
                             </h1>
-                            <p className="text-lg text-gray-400 mb-8">
-                                Battle your friends live with DSA problems. First to solve wins. No BS, just speed and skill.
-                            </p>
+                           <p className="text-lg text-gray-300 mb-8 leading-relaxed">
+  Battle your friends live with <span className="text-purple-400 font-semibold">DSA problems</span>. 
+  First to solve wins.
+</p>
 
                             <div className="flex flex-col sm:flex-row justify-center gap-4 mb-6">
                                 <button
                                     onClick={handleCreateMatchClick}
-                                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg hover:scale-105 transition shadow-lg"
+                                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg hover:scale-105 transition shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50"
                                 >
                                     Create Room
                                 </button>
@@ -331,11 +333,11 @@ const onGameStarted = (data) => {
                                         placeholder="Enter Room Code"
                                         value={roomIdInput}
                                         onChange={(e) => setRoomIdInput(e.target.value)}
-                                        className="bg-gray-800 border border-gray-600 px-4 py-2 rounded-md text-white placeholder-gray-500"
+                                        className="bg-gray-900 border border-purple-500/40 px-4 py-2 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 transition"
                                     />
                                     <button
                                         onClick={handleJoinMatchClick}
-                                        className="px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600"
+                                         className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-800 text-white font-semibold rounded-lg hover:scale-105 transition shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50"
                                     >
                                         Join
                                     </button>
@@ -356,7 +358,7 @@ const onGameStarted = (data) => {
                     )}
 
                     {setupStep === 'createName' && (
-                        <div className="bg-gray-800 p-8 rounded-xl shadow-2xl border border-gray-700 w-full max-w-md flex flex-col items-center space-y-6">
+                        <div className="bg-gray-900 p-8 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-md flex flex-col items-center space-y-6">
                             <h2 className="text-3xl font-bold text-green-400">Enter Your Name</h2>
                             <input
                                 type="text"
@@ -382,7 +384,7 @@ const onGameStarted = (data) => {
                     )}
 
                     {setupStep === 'joinName' && (
-                        <div className="bg-gray-800 p-8 rounded-xl shadow-2xl border border-gray-700 w-full max-w-md flex flex-col items-center space-y-6">
+                        <div className="bg-gray-900 p-8 rounded-xl shadow-2xl border border-gray-700 w-full max-w-md flex flex-col items-center space-y-6">
                             <h2 className="text-3xl font-bold text-blue-400">Join Room</h2>
                             <input
                                 type="text"
@@ -477,22 +479,33 @@ const onGameStarted = (data) => {
                 )
             )}
             {(gameStatus === "waiting" && !currentRoomId) && (
-                <div className="mt-16 w-full max-w-5xl">
-                    <h2 className="text-xl font-semibold text-white mb-4">Why Code Arena?</h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
-                        <div className="bg-gray-900 p-6 rounded-lg border border-gray-800">
-                            <h3 className="text-lg font-bold mb-2">Real-Time Battles</h3>
-                            <p className="text-sm text-gray-400">Live problem-solving. Compete instantly.</p>
-                        </div>
-                        <div className="bg-gray-900 p-6 rounded-lg border border-gray-800">
-                            <h3 className="text-lg font-bold mb-2">Fair Play</h3>
-                            <p className="text-sm text-gray-400">Both users get same questions, own editors.</p>
-                        </div>
-                        <div className="bg-gray-900 p-6 rounded-lg border border-gray-800">
-                            <h3 className="text-lg font-bold mb-2">Aura Farming</h3>
-                            <p className="text-sm text-gray-400">Increase Your Aura.</p>
-                        </div>
-                    </div>
+        <div className="mt-16 w-full max-w-5xl">
+  <h2 className="text-3xl font-extrabold text-gray-100 mb-10 text-center tracking-tight">
+    Why Code Arena?
+  </h2>
+
+  <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
+    <div className="bg-gray-950/80 p-8 rounded-2xl border border-gray-800 shadow-[0_8px_30px_rgb(0,0,0,0.4)] hover:shadow-[0_8px_40px_rgba(255,255,255,0.08)] transition transform hover:-translate-y-1">
+      <h3 className="text-xl font-semibold text-white mb-3"> Real-Time Battles</h3>
+      <p className="text-sm text-gray-400 leading-relaxed">
+        Live problem-solving. Compete instantly with anyone, anywhere.
+      </p>
+    </div>
+
+    <div className="bg-gray-950/80 p-8 rounded-2xl border border-gray-800 shadow-[0_8px_30px_rgb(0,0,0,0.4)] hover:shadow-[0_8px_40px_rgba(255,255,255,0.08)] transition transform hover:-translate-y-1">
+      <h3 className="text-xl font-semibold text-white mb-3"> Fair Play</h3>
+      <p className="text-sm text-gray-400 leading-relaxed">
+        Both users get the same challenges, with their own editors.
+      </p>
+    </div>
+
+    <div className="bg-gray-950/80 p-8 rounded-2xl border border-gray-800 shadow-[0_8px_30px_rgb(0,0,0,0.4)] hover:shadow-[0_8px_40px_rgba(255,255,255,0.08)] transition transform hover:-translate-y-1">
+      <h3 className="text-xl font-semibold text-white mb-3"> Aura Farming</h3>
+      <p className="text-sm text-gray-400 leading-relaxed">
+        Win matches, build your aura, and climb the arena rankings.
+      </p>
+    </div>
+  </div>
 
 
                     <VideoTrial />
