@@ -135,7 +135,9 @@ io.on('connection', (socket) => {
 
     if (loser && winner) {
         io.to(roomId).emit('playerGaveUp', { loser: loser.name, winner: winner.name });
-       await deleteRoom(roomId); 
+      if (room.players.length === 0) {
+            await deleteRoom(roomId);
+        }
     }
 });
 
