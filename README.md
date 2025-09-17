@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Code Arena 
 
-## Getting Started
+Code Arena is a real-time competitive coding platform where users can battle friends or random opponents with live coding challenges. Solve problems and race to victory all in real time!
 
-First, run the development server:
+ Features-
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Real-Time Battles: Challenge friends or random players in live coding competitions.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Two-Player Arena: One-on-one coding duels with fair challenges.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Live Scoreboard: Track your opponent’s progress and your own in real-time.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Match Countdown: Get ready with a dynamic countdown before the match starts.
 
-## Learn More
+Problem Variety: Randomly selected coding problems with multiple test cases.
 
-To learn more about Next.js, take a look at the following resources:
+Game Actions: Start game, give up, reset, leave room, and join any active room.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+No Login Required: Simply enter your name and start competing.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Responsive UI: Works seamlessly on desktop and mobile.
 
-## Deploy on Vercel
+ Live Demo
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+https://code-arena-omega.vercel.app/
+Link to live demo
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+ How to Play
+
+Create or Join a Room
+
+Enter your name and create a new room, or join an existing room with a room ID.
+
+Wait for Players
+
+The game requires 2 players to start.
+
+Match Countdown
+
+A countdown will appear before the match begins.
+
+Solve the Problem
+
+Type your solution in the editor.
+
+Submissions are evaluated in real-time.
+
+Win the Game
+
+Complete all test cases first to become the winner.
+
+You can also give up to let your opponent win.
+
