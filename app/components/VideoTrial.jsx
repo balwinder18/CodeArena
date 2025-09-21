@@ -44,12 +44,12 @@ const handleMouseLeave = () => {
     >
       <video
         ref={videoRef}
-        src="/video/trial.mp4"
+        src="/video/CodeArenaTrialnew.mp4"
         muted
         playsInline
         loading="lazy"
         controls
-        poster="/video/codeArena.PNG"
+        poster="/video/codeArenaPoster.PNG"
         className="w-full aspect-video rounded-xl shadow-2xl border border-gray-700"
          onVolumeChange={(e) => e.target.muted = true}
       >
