@@ -44,7 +44,7 @@ const handleMouseLeave = () => {
     >
       <video
         ref={videoRef}
-        src="/video/CodeArenaTrialnew.mp4"
+        src="/video/TrialArena.mp4"
         muted
         playsInline
         loading="lazy"
