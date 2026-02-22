@@ -31,28 +31,6 @@ const runCodeAPI = async (code, languageId, input) => {
 
 
 
-// const runCodeAPI = async(code , language_id , input) =>{
-
-//    try {
-
-//     const response = await axios.post('https://open-compiler-c8cxc5h9gxb3cah9.centralindia-01.azurewebsites.net/api/v1/code/execute',{
-          
-       
-//            source_code: code,
-//            language_id: language_id,
-//            input: input
-
-//          },
-//     );
-//    console.log(response);
-//     return response;
-    
-//    } catch (error) {
-//     console.log(error);
-//     return;
-//    }
-// }
-
 
 const generateDefaultFunction = (problem, langMode) => {
     if (!problem || !problem.testCases || problem.testCases.length === 0) return '';
