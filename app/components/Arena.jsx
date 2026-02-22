@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import Editor from "@monaco-editor/react";
 import { PanelGroup, Panel, PanelResizeHandle } from "react-resizable-panels";
+import axios from 'axios';
 
 
 
@@ -27,6 +28,30 @@ const runCodeAPI = async (code, languageId, input) => {
         return { stderr: "Failed to connect to the execution service." };
     }
 };
+
+
+
+// const runCodeAPI = async(code , language_id , input) =>{
+
+//    try {
+
+//     const response = await axios.post('https://open-compiler-c8cxc5h9gxb3cah9.centralindia-01.azurewebsites.net/api/v1/code/execute',{
+          
+       
+//            source_code: code,
+//            language_id: language_id,
+//            input: input
+
+//          },
+//     );
+//    console.log(response);
+//     return response;
+    
+//    } catch (error) {
+//     console.log(error);
+//     return;
+//    }
+// }
 
 
 const generateDefaultFunction = (problem, langMode) => {

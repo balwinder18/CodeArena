@@ -282,7 +282,7 @@ const onGameStarted = (data) => {
 
 
     return (
-        <div className="min-h-screen bg-gradient-to-tr from-black via-gray-950 to-black text-white font-sans p-4 flex flex-col items-center">
+        <div className="min-h-screen bg-black text-gray-100 font-sans p-4 flex flex-col items-center">
 
             {showModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
@@ -298,7 +298,7 @@ const onGameStarted = (data) => {
                 </div>
             )}
 
-           <h1 className="text-6xl font-extrabold mb-8 tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-500 to-pink-600 drop-shadow-[0_0_20px_rgba(139,92,246,0.8)]">
+           <h1 className="text-6xl font-extrabold mb-8 tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-[#FFD166] to-[#D4A017] drop-shadow-[0_0_15px_rgba(245,184,65,0.4)]">
   Code Arena
 </h1>
 
@@ -307,7 +307,7 @@ const onGameStarted = (data) => {
                 <>
                     {setupStep === 'landing' && (
                         <div className="text-center max-w-3xl">
-                            <span className="text-sm px-3 py-1 border border-yellow-500 rounded-full text-yellow-400 mb-4 inline-block">
+                            <span className="text-sm px-3 py-1 border border-[#D4A017] rounded-full text-[#F5B841] mb-4 inline-block bg-[#1A1F2E]">
                                 ⚔️ Proudly Real-Time
                             </span>
                             <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold mb-6 leading-tight">
@@ -315,14 +315,14 @@ const onGameStarted = (data) => {
                                 Win in Real-Time.
                             </h1>
                            <p className="text-lg text-gray-300 mb-8 leading-relaxed">
-  Battle your friends live with <span className="text-purple-400 font-semibold">DSA problems</span>. 
+  Battle your friends live with <span className="text-[#F5B841] font-semibold">DSA problems</span>. 
   First to solve wins.
 </p>
 
                             <div className="flex flex-col sm:flex-row justify-center gap-4 mb-6">
                                 <button
                                     onClick={handleCreateMatchClick}
-                                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg hover:scale-105 transition shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50"
+                                    className="px-6 py-3 bg-gradient-to-r from-[#F5B841] to-[#D4A017] text-[#0B0F19] font-semibold rounded-lg hover:scale-105 transition shadow-lg shadow-yellow-600/30 hover:shadow-yellow-500/40"
                                 >
                                     Create Room
                                 </button>
@@ -337,7 +337,7 @@ const onGameStarted = (data) => {
                                     />
                                     <button
                                         onClick={handleJoinMatchClick}
-                                         className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-800 text-white font-semibold rounded-lg hover:scale-105 transition shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50"
+                                         className="px-4 py-2 bg-gradient-to-r from-[#F5B841] to-[#D4A017] text-[#0B0F19] font-semibold rounded-lg hover:scale-105 transition shadow-lg shadow-yellow-600/30 hover:shadow-yellow-500/40"
                                     >
                                         Join
                                     </button>
@@ -346,7 +346,7 @@ const onGameStarted = (data) => {
 
                             {connectionStatus === 'connecting' && (
                                 <div className="mt-4 text-center">
-                                    <p className="text-yellow-400 animate-pulse">Connecting to server...</p>
+                                    <p className="text-gray-400 animate-pulse">Connecting to server...</p>
                                     <p className="text-gray-400 text-sm">(Server can take up to {countdown} seconds to start.Wait!)</p>
                                 </div>
                             )}
@@ -446,7 +446,7 @@ const onGameStarted = (data) => {
                     ) : (
 
   <div className=" text-white flex flex-col items-center justify-center">
-      <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse mb-6">
+      <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-white animate-pulse mb-6">
         Match Starting In
       </h1>
 
